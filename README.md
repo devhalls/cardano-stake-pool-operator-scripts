@@ -430,15 +430,22 @@ However, on testnets we operate the Mithril signer directly and do not install a
 # Check compatability with your nodes version
 scripts/node.sh mithril check_compatability
 
-# Edit the MITHRIL_VERSION in your env file
+# Edit the MITHRIL_VERSION in your env file, then update
 nano env
-
-# Download the binaries
-scripts/node.sh mithril download
+scripts/node.sh mithril update
 
 # Install the signer env and service
 scripts/node.sh mithril install_signer_env
 scripts/node.sh mithril install_signer_service
+```
+
+### Mithril update
+
+When you would like to update mithril, edit `MITHRIL_VERSION` in your env file and run the update script.
+
+```shell
+nano env
+scripts/node.sh mithril update
 ```
 
 ### Mithril relay
@@ -467,6 +474,15 @@ a new installation.
 ```shell
 scripts/dbsync.sh download
 scripts/dbsync.sh install
+```
+
+### DBSync update
+
+When you would like to update db-sync, edit `DB_SYNC_VERSION` in your env file and run the update script.
+
+```shell
+nano env
+scripts/dbsync.sh update
 ```
 
 When running, you can review the status and progress with the commands below, to see a full list of commands to manage

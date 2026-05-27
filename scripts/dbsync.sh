@@ -1,11 +1,15 @@
 #!/bin/bash
-# Usage: dbsync.sh [
+# Usage: dbsync.sh (
+#   update |
+#   target |
+#   current |
+#   check |
 #   dependencies |
 #   download |
 #   install |
-#   snapshot_download |
-#   snapshot_process |
-#   snapshot_restore |
+#   snapshot |
+#   process |
+#   import |
 #   run |
 #   start |
 #   stop |
@@ -15,17 +19,22 @@
 #   create |
 #   drop |
 #   view |
-#   help [?-h]
-# ]
+#   get_block |
+#   help [-h]
+# )
 #
 # Info:
 #
+#   - update) Updates db-sync to $DB_SYNC_VERSION.
+#   - target) Get the target db-sync version from the env file.
+#   - current) Get the current db-sync version.
+#   - check) Check if there is an update available from the current version.
 #   - dependencies) Install db sync dependencies, eg postgresql. Creates a new pg user $POSTGRES_USER.
 #   - download) Download the db sync binaries.
 #   - install) Install the db sync service and create directories.
-#   - snapshot_download) Download the db sync snapshot from $DB_SYNC_PG_SNAPSHOT.
-#   - snapshot_process) Processes the db sync snapshot zip archive preparing for import.
-#   - snapshot_restore) Restore db sync snapshot.
+#   - snapshot) Download the db sync snapshot from $DB_SYNC_PG_SNAPSHOT.
+#   - process) Processes the db sync snapshot zip archive preparing for import.
+#   - import) Restore db sync snapshot.
 #   - run) Run the db sync service.
 #   - start) Start the db-sync systemctl service.
 #   - stop) Stop the db-sync systemctl service.
@@ -35,7 +44,8 @@
 #   - create) ...
 #   - drop) ...
 #   - view) ...
-#   - help) View this files help. Default value if no option is passed.
+#   - get_block) Get the latest block number from the db-sync database.
+#   - help) View this files help.
 
 source "$(dirname "$0")/../env"
 source "$(dirname "$0")/common.sh"
@@ -68,6 +78,41 @@ dbsync_download() {
         print 'ERROR' "Unable to download db-sync binaries for $(platform)/$(platform_arch)" $red
         exit 1
     fi
+}
+
+dbsync_update_target_version() {
+    echo $DB_SYNC_VERSION
+}
+
+dbsync_update_current_version() {
+    echo "$($DB_SYNC --version 2>/dev/null | awk '{print $2}')"
+}
+
+dbsync_update_check_version() {
+    local latest current
+    latest=$(dbsync_update_target_version)
+    current=$(dbsync_update_current_version)
+    if [ "$current" == "$latest" ]; then
+        print 'UPDATE' "DB-sync is already up to date (v$current)" $green
+        exit 1
+    elif [ -z "$current" ] || [ -z "$latest" ]; then
+        print 'UPDATE' "Unable to read update versions [current:$current] [latest:$latest]" $red
+        exit 1
+    else
+        echo $latest
+    fi
+}
+
+dbsync_update() {
+    exit_if_cold
+    local latest
+    latest=$(dbsync_update_check_version)
+    confirm "Please confirm db-sync update to version: $latest?"
+    dbsync_stop
+    dbsync_download
+    dbsync_restart
+    $DB_SYNC --version
+    print 'UPDATE' "DB-sync updated and restarted" $green
 }
 
 dbsync_install() {
@@ -208,6 +253,10 @@ dbsync_get_block() {
 }
 
 case $1 in
+    update) dbsync_update ;;
+    target) dbsync_update_target_version ;;
+    current) dbsync_update_current_version ;;
+    check) dbsync_update_check_version ;;
     dependencies) dbsync_dependencies ;;
     download) dbsync_download ;;
     install) dbsync_install ;;

@@ -1,5 +1,9 @@
 #!/bin/bash
 # Usage: node/mithril.sh (
+#   update |
+#   target |
+#   current |
+#   check |
 #   download |
 #   sync |
 #   check_compatability |
@@ -24,6 +28,10 @@
 #
 # Info:
 #
+#   - update) Updates mithril to $MITHRIL_VERSION.
+#   - target) Get the target mithril version from the env file.
+#   - current) Get the current mithril version.
+#   - check) Check if there is an update available from the current version.
 #   - download) Download the mithril binaries.
 #   - sync) Sync your node using the Mithril client.
 #   - check_compatability) Checks if $NODE_VERSION is compatible as a mithril signer.
@@ -68,6 +76,8 @@ mithril_download() {
         extract_mithril_release "$filename"
         chmod +x -R $BIN_PATH
         rm -R downloads
+        mkdir -p $MITHRIL_PATH
+        echo "$MITHRIL_VERSION" > "$MITHRIL_PATH/version"
         $MITHRIL_CLIENT --version
         $MITHRIL_SIGNER --version
         print 'DOWNLOAD' "Mithril binaries moved to $BIN_PATH" $green
@@ -110,6 +120,46 @@ mithril_check_compatability() {
     print 'MITHRIL' 'Min node version:'
     wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/networks.json |
         jq -r ".\"$NODE_NETWORK\".\"cardano-minimum-version\".\"mithril-signer\""
+}
+
+mithril_update_target_version() {
+    echo $MITHRIL_VERSION
+}
+
+mithril_update_current_version() {
+    if [ -f "$MITHRIL_PATH/version" ]; then
+        cat "$MITHRIL_PATH/version"
+    else
+        echo ""
+    fi
+}
+
+mithril_update_check_version() {
+    local latest current
+    latest=$(mithril_update_target_version)
+    current=$(mithril_update_current_version)
+    if [ "$current" == "$latest" ]; then
+        print 'UPDATE' "Mithril is already up to date (v$current)" $green
+        exit 1
+    elif [ -z "$current" ] || [ -z "$latest" ]; then
+        print 'UPDATE' "Unable to read update versions [current:$current] [latest:$latest]" $red
+        exit 1
+    else
+        echo $latest
+    fi
+}
+
+mithril_update() {
+    exit_if_not_producer
+    local latest
+    latest=$(mithril_update_check_version)
+    confirm "Please confirm mithril update to version: $latest?"
+    mithril_stop
+    mithril_download
+    mithril_restart
+    $MITHRIL_CLIENT --version
+    $MITHRIL_SIGNER --version
+    print 'UPDATE' "Mithril updated and restarted" $green
 }
 
 mithril_install_signer_env() {
@@ -330,6 +380,10 @@ mithril_verify_signer_signature() {
 }
 
 case $1 in
+    update) mithril_update ;;
+    target) mithril_update_target_version ;;
+    current) mithril_update_current_version ;;
+    check) mithril_update_check_version ;;
     download) mithril_download ;;
     sync) mithril_sync ;;
     check_compatability) mithril_check_compatability ;;
