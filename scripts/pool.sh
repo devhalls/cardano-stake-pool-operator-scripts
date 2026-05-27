@@ -33,50 +33,99 @@
 
 source "$(dirname "$0")/common.sh"
 
-pool_generate_node_keys() {
-    exit_if_not_cold
-    if [ -f $NODE_VKEY ]; then
-        confirm "Node keys already exist! 'yes' to overwrite, 'no' to cancel"
+# Private functions
+
+_pool_die() {
+    print 'ERROR' "$1" $red
+    return 1
+}
+
+_pool_fail() {
+    _pool_die "$1" || return 1
+}
+
+_require_cold_node() {
+    if is_not_cold_device; then
+        _pool_fail 'This command can only be run on a cold device'
     fi
+}
+
+_require_producer_node() {
+    if is_not_producer_device; then
+        _pool_fail 'This command can only be run on a producer device'
+    fi
+}
+
+_require_param() {
+    if [ -z "${1:-}" ]; then
+        _pool_fail "Parameter ${2:-unknown} is empty"
+    fi
+}
+
+_require_file() {
+    if [ ! -f "$1" ]; then
+        _pool_fail "File $1 does not exist"
+    fi
+}
+
+_confirm() {
+    read -p "$1 ([y]es or [N]o): "
+    case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
+        y | yes) return 0 ;;
+        *) _pool_fail 'Operation cancelled' ;;
+    esac
+}
+
+_require_file_missing_or_confirm() {
+    local file="$1"
+    local message="$2"
+    if [ -f "$file" ]; then
+        _confirm "$message" || return 1
+    fi
+    return 0
+}
+
+# Public functions
+
+pool_generate_node_keys() {
+    _require_cold_node || return 1
+    _require_file_missing_or_confirm "$NODE_VKEY" "Node keys already exist! 'yes' to overwrite, 'no' to cancel" || return 1
     $CNCLI conway node key-gen \
         --cold-verification-key-file $NODE_VKEY \
         --cold-signing-key-file $NODE_KEY \
         --operational-certificate-issue-counter $NODE_COUNTER
     print 'POOL' "Node keys created at $NETWORK_PATH/keys" $green
+    return 0
 }
 
 pool_generate_node_kes_keys() {
-    exit_if_not_cold
-    if [ -f $KES_VKEY ]; then
-        confirm "KES keys already exist! 'yes' to overwrite, 'no' to cancel"
-    fi
+    _require_cold_node || return 1
+    _require_file_missing_or_confirm "$KES_VKEY" "KES keys already exist! 'yes' to overwrite, 'no' to cancel" || return 1
     $CNCLI conway node key-gen-KES \
         --verification-key-file $KES_VKEY \
         --signing-key-file $KES_KEY
     print 'POOL' "Node KES keys created at $NETWORK_PATH/keys" $green
+    return 0
 }
 
 pool_generate_node_vrf_keys() {
-    exit_if_not_producer
-    if [ -f $VRF_VKEY ]; then
-        confirm "VRF keys already exist! 'yes' to overwrite, 'no' to cancel"
-    fi
+    _require_producer_node || return 1
+    _require_file_missing_or_confirm "$VRF_VKEY" "VRF keys already exist! 'yes' to overwrite, 'no' to cancel" || return 1
     $CNCLI conway node key-gen-VRF \
         --verification-key-file $VRF_VKEY \
         --signing-key-file $VRF_KEY
     chmod 400 $VRF_KEY
     print 'POOL' "Node VRF keys created at $NETWORK_PATH/keys" $green
+    return 0
 }
 
 pool_generate_node_op_cert() {
-    exit_if_not_cold
-    exit_if_file_missing $KES_VKEY
-    exit_if_file_missing $NODE_KEY
-    exit_if_file_missing $NODE_COUNTER
-    exit_if_empty "${1}" "1 kesPeriod"
-    if [ -f $NODE_CERT ]; then
-        confirm "Certificate already exist! 'yes' to overwrite, 'no' to cancel"
-    fi
+    _require_cold_node || return 1
+    _require_file "$KES_VKEY" || return 1
+    _require_file "$NODE_KEY" || return 1
+    _require_file "$NODE_COUNTER" || return 1
+    _require_param "${1}" "1 kesPeriod" || return 1
+    _require_file_missing_or_confirm "$NODE_CERT" "Certificate already exist! 'yes' to overwrite, 'no' to cancel" || return 1
     $CNCLI conway node issue-op-cert \
         --kes-verification-key-file $KES_VKEY \
         --cold-signing-key-file $NODE_KEY \
@@ -84,23 +133,21 @@ pool_generate_node_op_cert() {
         --kes-period ${1} \
         --out-file $NODE_CERT
     print 'POOL' "Node operational certificate created at $NODE_CERT" $green
+    return 0
 }
 
 pool_generate_pool_reg_cert() {
-    exit_if_not_cold
-    exit_if_file_missing $NODE_VKEY
-    exit_if_file_missing $VRF_VKEY
-    exit_if_file_missing $STAKE_VKEY
-    exit_if_file_missing $STAKE_VKEY
-    exit_if_empty "${1}" "1 pledge"
-    exit_if_empty "${2}" "2 cost"
-    exit_if_empty "${3}" "3 margin"
-    exit_if_empty "${4}" "4 metaUrl"
-    exit_if_empty "${5}" "5 metaHash"
-    exit_if_empty "$(get_option --relay "$@")" "--relay metaUrl"
-    if [ -f $POOL_CERT ]; then
-        confirm "Certificate already exist! 'yes' to overwrite, 'no' to cancel"
-    fi
+    _require_cold_node || return 1
+    _require_file "$NODE_VKEY" || return 1
+    _require_file "$VRF_VKEY" || return 1
+    _require_file "$STAKE_VKEY" || return 1
+    _require_param "${1}" "1 pledge" || return 1
+    _require_param "${2}" "2 cost" || return 1
+    _require_param "${3}" "3 margin" || return 1
+    _require_param "${4}" "4 metaUrl" || return 1
+    _require_param "${5}" "5 metaHash" || return 1
+    _require_param "$(get_option --relay "$@")" "--relay" || return 1
+    _require_file_missing_or_confirm "$POOL_CERT" "Certificate already exist! 'yes' to overwrite, 'no' to cancel" || return 1
     local pledge="${1}"
     local cost="${2}"
     local margin="${3}"
@@ -147,43 +194,44 @@ pool_generate_pool_reg_cert() {
         --metadata-hash $metaHash \
         --out-file $POOL_CERT
     print 'POOL' "Node registration certificate created at $POOL_CERT" $green
+    return 0
 }
 
 pool_generate_pool_dreg_cert() {
-    exit_if_not_cold
-    exit_if_file_missing $NODE_VKEY
-    exit_if_empty "${1}" "1 epoch"
-    if [ -f $POOL_DREG_CERT ]; then
-        confirm "Certificate already exist! 'yes' to overwrite, 'no' to cancel"
-    fi
+    _require_cold_node || return 1
+    _require_file "$NODE_VKEY" || return 1
+    _require_param "${1}" "1 epoch" || return 1
+    _require_file_missing_or_confirm "$POOL_DREG_CERT" "Certificate already exist! 'yes' to overwrite, 'no' to cancel" || return 1
     $CNCLI conway stake-pool deregistration-certificate \
         --cold-verification-key-file $NODE_VKEY \
         --epoch ${1} \
         --out-file $POOL_DREG_CERT
     print 'POOL' "Node de-registration certificate created at $POOL_DREG_CERT" $green
+    return 0
 }
 
 pool_generate_pool_meta_hash() {
-    exit_if_not_producer
-    exit_if_empty "${1}" "1 url"
+    _require_producer_node || return 1
+    _require_param "${1}" "1 url" || return 1
     local outputFileJson="$(dirname "$0")/../metadata/metadata.json"
     local outputFileHash="$(dirname "$0")/../metadata/metadataHash.txt"
-    wget -O $outputFileJson ${1}
-    exit_if_file_missing $outputFileJson
+    wget -O $outputFileJson ${1} || _pool_fail 'Could not download pool metadata' || return 1
+    _require_file "$outputFileJson" || return 1
 
     $CNCLI conway stake-pool metadata-hash \
-        --pool-metadata-file "${outputFileJson}" >"${outputFileHash}"
+        --pool-metadata-file "${outputFileJson}" >"${outputFileHash}" || _pool_fail 'Could not hash pool metadata' || return 1
     print 'POOL' "Node metadata hash saved to $NODE_HOME/metadata/metadataHash.txt" $green
     print 'POOL' "$(cat $NODE_HOME/metadata/metadataHash.txt)" $green
+    return 0
 }
 
 pool_rotate_kes() {
-    exit_if_not_cold
-    exit_if_file_missing $NODE_KEY
-    exit_if_file_missing $NODE_COUNTER
-    exit_if_empty "${1}" "1 startPeriod"
+    _require_cold_node || return 1
+    _require_file "$NODE_KEY" || return 1
+    _require_file "$NODE_COUNTER" || return 1
+    _require_param "${1}" "1 startPeriod" || return 1
     local startPeriod="${1}"
-    confirm "Please confirm this the correct KES start period: $startPeriod"
+    _confirm "Please confirm this the correct KES start period: $startPeriod" || return 1
 
     $CNCLI conway node key-gen-KES \
         --verification-key-file $KES_VKEY \
@@ -195,31 +243,35 @@ pool_rotate_kes() {
         --kes-period $startPeriod \
         --out-file $NODE_CERT
     print 'POOL' "Copy node.cert and kes.skey back to your block producer node and restart it" $green
+    return 0
 }
 
 pool_new_kes_counter() {
-    exit_if_not_cold
-    exit_if_file_missing $NODE_VKEY
+    _require_cold_node || return 1
+    _require_file "$NODE_VKEY" || return 1
     local counterValue="${1}"
     $CNCLI conway node new-counter \
         --cold-verification-key-file $NODE_VKEY \
         --counter-value $counterValue \
-        --operational-certificate-issue-counter-file $NODE_COUNTER
+        --operational-certificate-issue-counter-file $NODE_COUNTER || _pool_fail 'Could not update KES counter' || return 1
+    return 0
 }
 
 pool_get_pool_id() {
-    exit_if_not_cold
-    exit_if_file_missing $NODE_VKEY
+    _require_cold_node || return 1
+    _require_file "$NODE_VKEY" || return 1
     $CNCLI conway stake-pool id \
         --cold-verification-key-file $NODE_VKEY \
         --output-format ${1:-hex} >$POOL_ID
     echo "$(cat $POOL_ID)"
+    return 0
 }
 
 pool_get_stake() {
-    exit_if_file_missing $POOL_ID
+    _require_file "$POOL_ID" || return 1
     $CNCLI conway query stake-snapshot --stake-pool-id $(cat $POOL_ID) \
         $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH
+    return $?
 }
 
 pool_get_stats() {
@@ -237,7 +289,7 @@ pool_get_stats() {
     # - pool current epoch stake = set
     # - pool -2n epoch stake = mark
     # - pool middle current epoch stake = go
-    exit_if_file_missing $POOL_ID
+    _require_file "$POOL_ID" || return 1
     local stakeSnapshot=$(pool_get_stake)
     local totalStake=$(echo "$stakeSnapshot" | jq -r ".total.stakeSet")
     local stakeSet=$(echo "$stakeSnapshot" | jq -r ".pools | to_entries[0].value.stakeSet")
@@ -278,6 +330,7 @@ pool_get_stats() {
             update_or_append $file "data_totalReserves" "data_totalReserves $(echo "$totalsApiData" | jq -r '.reserves // 0')"
         fi
     fi
+    return 0
 }
 
 case $1 in
@@ -291,9 +344,9 @@ case $1 in
     rotate_kes) pool_rotate_kes "${@:2}" ;;
     new_kes) pool_new_kes_counter "${@:2}" ;;
     get_pool_id) pool_get_pool_id "${@:2}" ;;
-    get_info) pool_get_info ;;
     get_stake) pool_get_stake ;;
     get_stats) pool_get_stats ;;
     help) help "${2:-"--help"}" ;;
     *) help "${1:-"--help"}" ;;
 esac
+exit $?

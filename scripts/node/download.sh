@@ -11,7 +11,7 @@
 #   - download) Download node binaries from IntersectMBO releases. Default value if no options are passed.
 #   - node) Download node binaries from IntersectMBO releases.
 #   - path) Set $BIN_PATH permissions and check if its in the $PATH.
-#   - help) View this files help.
+#   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/../common.sh"
 

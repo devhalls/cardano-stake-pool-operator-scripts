@@ -29,7 +29,7 @@
 #   - grafana) Install Grafana on Monitoring Node only - must be a relay.
 #   - service) Create the node systemctl service.
 #   - clean) Clean the installation and remove all files.
-#   - help) View this files help.
+#   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/../common.sh"
 

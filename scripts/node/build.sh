@@ -17,7 +17,7 @@
 #   - secp) Build secp256k1 from source.
 #   - blst) Build libblst from source.
 #   - node) Build cardano node and cli from source.
-#   - help) View this files help.
+#   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/../common.sh"
 

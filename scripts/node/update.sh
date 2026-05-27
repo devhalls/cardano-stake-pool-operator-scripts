@@ -1,7 +1,7 @@
 #!/bin/bash
 # Usage: node/update.sh (
 #   update |
-#   latest |
+#   target |
 #   current |
 #   check |
 #   binaries |
@@ -19,7 +19,7 @@
 #   - binaries) Build or download the node binaries based on $NODE_BUILD.
 #   - build) Build the node binaries from source.
 #   - download) Download the node binaries.
-#   - help) View this files help.
+#   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/../common.sh"
 

@@ -56,6 +56,12 @@ _require_producer_node() {
     fi
 }
 
+_require_file() {
+    if [ ! -f "$1" ]; then
+        _query_fail "File $1 does not exist"
+    fi
+}
+
 # Public functions
 
 query_tip() {
@@ -108,14 +114,14 @@ query_metrics() {
 }
 
 query_config() {
-    exit_if_file_missing "$NETWORK_PATH/$1"
+    _require_file "$NETWORK_PATH/$1" || return 1
     cat "$NETWORK_PATH/$1"
     echo ''
     return 0
 }
 
 query_key() {
-    exit_if_file_missing "$NETWORK_PATH/keys/$1"
+    _require_file "$NETWORK_PATH/keys/$1" || return 1
     cat "$NETWORK_PATH/keys/$1"
     echo ''
     return 0
@@ -179,7 +185,7 @@ query_keys() {
 
 query_kes() {
     _require_producer_node || return 1
-    exit_if_file_missing "$NODE_CERT"
+    _require_file "$NODE_CERT" || return 1
     $CNCLI conway query kes-period-info $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
         --op-cert-file "$NODE_CERT"
     return 0
@@ -187,7 +193,7 @@ query_kes() {
 
 query_kes_period() {
     _require_warm_node || return 1
-    exit_if_file_missing "$NETWORK_PATH/shelley-genesis.json"
+    _require_file "$NETWORK_PATH/shelley-genesis.json" || return 1
     local slotsPerKESPeriod=$(cat "$NETWORK_PATH/shelley-genesis.json" | jq -r '.slotsPerKESPeriod')
     local slotNo=$(query_tip slot) || return 1
     local kesPeriod=$(($slotNo / $slotsPerKESPeriod))
@@ -199,14 +205,14 @@ query_kes_period() {
 
 query_uxto() {
     _require_warm_node || return 1
-    exit_if_file_missing "$PAYMENT_ADDR"
+    _require_file "$PAYMENT_ADDR" || return 1
     cardano_cli_query_utxo_text "${1:-"$(cat $PAYMENT_ADDR)"}" /dev/stdout || _query_fail 'Could not query UTXO' || return 1
     return 0
 }
 
 query_leader() {
     _require_producer_node || return 1
-    exit_if_file_missing "$POOL_ID"
+    _require_file "$POOL_ID" || return 1
 
     local period="--${1:-"next"}"
     local targetEpoch
@@ -263,7 +269,7 @@ query_leader() {
 
 query_rewards() {
     _require_warm_node || return 1
-    exit_if_file_missing "$STAKE_ADDR"
+    _require_file "$STAKE_ADDR" || return 1
     local data
     data=$(
         $CNCLI conway query stake-address-info $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
@@ -278,7 +284,6 @@ query_rewards() {
 }
 
 case $1 in
-    sum) query_sum "${@:2}" ;;
     tip) query_tip "${@:2}" ;;
     params) query_params "${@:2}" ;;
     state) query_state "${@:2}" ;;
