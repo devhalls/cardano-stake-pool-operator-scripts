@@ -272,10 +272,10 @@ pool_get_stats() {
         local totalsApiResponse=$(curl -s "${NODE_KOIOS_API}totals?limit=1")
         if echo "$totalsApiResponse" | jq -e 'type == "array"' > /dev/null; then
             local totalsApiData=$(echo "$totalsApiResponse" | jq '.[-1]')
-            update_or_append $file "data_totalCirculation" "data_totalCirculation $(echo "$totalsApiData" | jq -r '.circulation')"
-            update_or_append $file "data_totalSupply" "data_totalSupply $(echo "$totalsApiData" | jq -r '.supply')"
-            update_or_append $file "data_totalTreasury" "data_totalTreasury $(echo "$totalsApiData" | jq -r '.treasury')"
-            update_or_append $file "data_totalReserves" "data_totalReserves $(echo "$totalsApiData" | jq -r '.reserves')"
+            update_or_append $file "data_totalCirculation" "data_totalCirculation $(echo "$totalsApiData" | jq -r '.circulation // 0')"
+            update_or_append $file "data_totalSupply" "data_totalSupply $(echo "$totalsApiData" | jq -r '.supply // 0')"
+            update_or_append $file "data_totalTreasury" "data_totalTreasury $(echo "$totalsApiData" | jq -r '.treasury // 0')"
+            update_or_append $file "data_totalReserves" "data_totalReserves $(echo "$totalsApiData" | jq -r '.reserves // 0')"
         fi
     fi
 }

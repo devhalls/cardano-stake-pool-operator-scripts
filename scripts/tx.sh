@@ -350,13 +350,21 @@ tx_out() {
     txIn=$(get_option --tx-in "${@:6}")
     params=${@:8}
 
+    # get_option returns only values; build --tx-in VALUE for each UTXO
+    txInArgs=""
+    for v in $txIn; do
+        txInArgs="$txInArgs --tx-in $v"
+    done
+
     paymentAddress=$(<$PAYMENT_ADDR)
     currentSlot=$(bash $(dirname "$0")/query.sh tip slot)
     outputPath=$NETWORK_PATH/temp
+    mkdir -p "$outputPath"
 
-    # Calculate the fee.
+    # Calculate the fee (tx must include both destination and change outputs for correct size).
     $CNCLI conway transaction build-raw \
-        ${txIn} \
+        $txInArgs \
+        --tx-out ${destinationAddress}+${amount} \
         --tx-out ${paymentAddress}+$((${totalBalance} - ${amount})) \
         --invalid-hereafter $((${currentSlot} + 10000)) \
         --fee 0 \
@@ -366,16 +374,17 @@ tx_out() {
     fee=$($CNCLI conway transaction calculate-min-fee \
         --tx-body-file $outputPath/tx.tmp \
         --tx-in-count ${txCount} \
-        --tx-out-count 1 \
+        --tx-out-count 2 \
         $NETWORK_ARG \
         --witness-count $witnessCount \
         --byron-witness-count 0 \
-        --protocol-params-file $NETWORK_PATH/params.json | awk '{ print $1 }')
+        --protocol-params-file $NETWORK_PATH/params.json | jq -r '.fee // .')
     txOut=$((${totalBalance} - ${amount} - ${fee}))
 
-    # Build the tx.raw.
+    # Build the tx.raw (destination output + change output).
     $CNCLI conway transaction build-raw \
-        ${txIn} \
+        $txInArgs \
+        --tx-out ${destinationAddress}+${amount} \
         --tx-out ${paymentAddress}+${txOut} \
         --invalid-hereafter $((${currentSlot} + 10000)) \
         --fee ${fee} \
@@ -414,7 +423,12 @@ tx_build() {
 }
 
 tx_sign() {
-    signers=$(get_option --signing-key-file "$@")
+    signingKeyFiles=$(get_option --signing-key-file "$@")
+    # get_option returns only values; build --signing-key-file PATH for each
+    signers=""
+    for f in $signingKeyFiles; do
+        signers="$signers --signing-key-file $f"
+    done
     tempPath=$NETWORK_PATH/temp
     votePath=$NETWORK_PATH/temp/vote.raw
 
