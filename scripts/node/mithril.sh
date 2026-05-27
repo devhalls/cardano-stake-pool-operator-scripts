@@ -59,7 +59,7 @@ extract_mithril_release() {
     local filename="$1"
     local extract_dir="downloads/extract"
 
-    rm -rf "$extract_dir"
+    remove_path "$extract_dir"
     mkdir -p "$extract_dir"
     tar -xvzf "downloads/$filename" -C "$extract_dir"
     cp -a "$extract_dir/." "$BIN_PATH/"
@@ -75,7 +75,7 @@ mithril_download() {
         filename=$DOWNLOAD_RELEASE_FILENAME
         extract_mithril_release "$filename"
         chmod +x -R $BIN_PATH
-        rm -R downloads
+        remove_path downloads
         mkdir -p $MITHRIL_PATH
         echo "$MITHRIL_VERSION" > "$MITHRIL_PATH/version"
         $MITHRIL_CLIENT --version
@@ -84,7 +84,7 @@ mithril_download() {
         return 0
     fi
 
-    rm -R downloads
+    remove_path downloads
     print 'ERROR' "Unable to download mithril binaries for $(platform)/$(platform_arch)" $red
     exit 1
 }
@@ -233,7 +233,7 @@ mithril_install_squid() {
         make
         sudo make install
         /opt/squid/sbin/squid -v
-        rm -R downloads
+        remove_path downloads
     else
         print 'ERROR' 'Could not install squid' $red
     fi

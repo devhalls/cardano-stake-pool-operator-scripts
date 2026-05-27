@@ -65,16 +65,16 @@ dbsync_download() {
 
     if download_release_file "$remote" "${filenames[@]}"; then
         filename=$DOWNLOAD_RELEASE_FILENAME
-        rm -rf "$extract_dir"
+        remove_path "$extract_dir"
         mkdir -p "$extract_dir"
         tar -xvzf "downloads/$filename" -C "$extract_dir"
         sudo cp -a "$extract_dir/." $BIN_PATH/
         chmod +x -R $BIN_PATH
-        rm -R downloads
+        remove_path downloads
         $DB_SYNC_NAME --version
         print 'INSTALL' "DBSync binaries moved to $BIN_PATH" $green
     else
-        rm -R downloads
+        remove_path downloads
         print 'ERROR' "Unable to download db-sync binaries for $(platform)/$(platform_arch)" $red
         exit 1
     fi

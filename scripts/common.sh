@@ -352,6 +352,11 @@ dbsync_release_filenames() {
     esac
 }
 
+remove_path() {
+    [ $# -gt 0 ] || return 0
+    command rm -rf "$@"
+}
+
 download_release_file() {
     local remote="$1"
     shift
@@ -367,7 +372,7 @@ download_release_file() {
             DOWNLOAD_RELEASE_FILENAME="$filename"
             return 0
         fi
-        rm -f "downloads/$filename"
+        remove_path "downloads/$filename"
     done
     return 1
 }

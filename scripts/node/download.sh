@@ -19,7 +19,7 @@ extract_cardano_node_release() {
     local filename="$1"
     local extract_dir="downloads/extract"
 
-    rm -rf "$extract_dir"
+    remove_path "$extract_dir"
     mkdir -p "$extract_dir"
 
     case "$filename" in
@@ -47,12 +47,12 @@ download_node() {
     if download_release_file "$NODE_REMOTE" "${filenames[@]}"; then
         filename=$DOWNLOAD_RELEASE_FILENAME
         extract_cardano_node_release "$filename"
-        rm -R downloads
+        remove_path downloads
         print 'DOWNLOAD' "Node binaries moved to $BIN_PATH" $green
         return 0
     fi
 
-    rm -R downloads
+    remove_path downloads
     print 'ERROR' "Unable to download binaries for $(platform)/$(platform_arch)" $red
     exit 1
 }
