@@ -47,41 +47,36 @@
 
 source "$(dirname "$0")/../common.sh"
 
+extract_mithril_release() {
+    local filename="$1"
+    local extract_dir="downloads/extract"
+
+    rm -rf "$extract_dir"
+    mkdir -p "$extract_dir"
+    tar -xvzf "downloads/$filename" -C "$extract_dir"
+    cp -a "$extract_dir/." "$BIN_PATH/"
+}
+
 mithril_download() {
     exit_if_cold
     print 'MITHRIL' "Downloading mithril binaries"
-    local p=$(platform)
-    local arm=$(platform_arm)
-    mkdir -p downloads
+    local filenames=($(mithril_release_filenames))
+    local filename
 
-    if [ "$arm" == 'arm' ]; then
-        local filename="mithril-binaries-version-${MITHRIL_VERSION//./_}"
-        wget -O "downloads/$filename.tar.zst" "$MITHRIL_REMOTE_ARM/$filename.tar.zst"
-        if [ $? -eq 0 ]; then
-            tar --zstd -xvf "downloads/$filename.tar.zst" -C downloads
-        fi
-    else
-        local filename="mithril-$MITHRIL_VERSION-$p-x64"
-        wget -O "downloads/$filename.tar.gz" "$MITHRIL_REMOTE/$filename.tar.gz"
-        if [ $? -eq 0 ]; then
-            mkdir -p downloads/$filename
-            tar -xvzf "downloads/$filename.tar.gz" -C downloads/$filename
-        fi
-    fi
-
-    if [ $? -eq 0 ]; then
-        cp -a downloads/$filename/. $BIN_PATH/
+    if download_release_file "$MITHRIL_REMOTE" "${filenames[@]}"; then
+        filename=$DOWNLOAD_RELEASE_FILENAME
+        extract_mithril_release "$filename"
         chmod +x -R $BIN_PATH
         rm -R downloads
         $MITHRIL_CLIENT --version
         $MITHRIL_SIGNER --version
         print 'DOWNLOAD' "Mithril binaries moved to $BIN_PATH" $green
         return 0
-    else
-        rm -R downloads
-        print 'ERROR' "Unable to download mithril binaries" $red
-        exit 1
     fi
+
+    rm -R downloads
+    print 'ERROR' "Unable to download mithril binaries for $(platform)/$(platform_arch)" $red
+    exit 1
 }
 
 mithril_sync() {

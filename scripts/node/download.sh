@@ -1,7 +1,6 @@
 #!/bin/bash
 # Usage: node/download.sh (
 #   download |
-#   arm |
 #   node |
 #   path |
 #   help [-h]
@@ -9,52 +8,53 @@
 #
 # Info:
 #
-#   - download) Installs a Cardano node and all dependencies. Default value if no options are passed.
-#   - arm) Download node binaries from the arm repositories.
-#   - node) Download node binaries from the cardano repositories.
+#   - download) Download node binaries from IntersectMBO releases. Default value if no options are passed.
+#   - node) Download node binaries from IntersectMBO releases.
 #   - path) Set $BIN_PATH permissions and check if its in the $PATH.
 #   - help) View this files help.
 
 source "$(dirname "$0")/../common.sh"
 
-download_arm() {
-    print 'DOWNLOAD' "Downloading node arm binaries"
-    local filename="cardano-${NODE_VERSION//./_}${NODE_REMOTE_ARM_FILE_SUFFIX}"
-    mkdir -p downloads
-    wget -O downloads/$filename $NODE_REMOTE_ARM/$filename.tar.zst
-    if [ $? -eq 0 ]; then
-        tar -I zstd -xvf downloads/$filename -C downloads
-        cp -a downloads/$filename/. $BIN_PATH/
-        rm -R downloads
-    else
-        rm -R downloads
-        print 'ERROR' "Unable to download arm binaries" $red
-        exit 1
-    fi
-    print 'DOWNLOAD' "Node binaries moved to $BIN_PATH" $green
-    return 0
+extract_cardano_node_release() {
+    local filename="$1"
+    local extract_dir="downloads/extract"
+
+    rm -rf "$extract_dir"
+    mkdir -p "$extract_dir"
+
+    case "$filename" in
+        *.zip)
+            unzip -q "downloads/$filename" -d "$extract_dir"
+            ;;
+        *.tar.gz)
+            tar -xvzf "downloads/$filename" -C "$extract_dir"
+            ;;
+        *)
+            print 'ERROR' "Unsupported release archive: $filename" $red
+            return 1
+            ;;
+    esac
+
+    cp -a "$extract_dir/bin/." "$BIN_PATH/"
 }
 
 download_node() {
-    print 'DOWNLOAD' "Downloading node binaries"
-    mkdir -p downloads
-    case $(platform) in
-        windows) p="win64" ;;
-        *) p=$(platform) ;;
-    esac
-    local filename="cardano-node-$NODE_VERSION-$p.tar.gz"
-    wget -O downloads/$filename $NODE_REMOTE/$filename
-    if [ $? -eq 0 ]; then
-        tar -xvzf downloads/$filename -C downloads
-        cp -a downloads/bin/. $BIN_PATH/
+    require_cardano_node_arm64_version
+    print 'DOWNLOAD' "Downloading node binaries from IntersectMBO releases"
+    local filenames=($(cardano_node_release_filenames))
+    local filename
+
+    if download_release_file "$NODE_REMOTE" "${filenames[@]}"; then
+        filename=$DOWNLOAD_RELEASE_FILENAME
+        extract_cardano_node_release "$filename"
         rm -R downloads
-    else
-        rm -R downloads
-        print 'ERROR' "Unable to download binaries" $red
-        exit 1
+        print 'DOWNLOAD' "Node binaries moved to $BIN_PATH" $green
+        return 0
     fi
-    print 'DOWNLOAD' "Node binaries moved to $BIN_PATH" $green
-    return 0
+
+    rm -R downloads
+    print 'ERROR' "Unable to download binaries for $(platform)/$(platform_arch)" $red
+    exit 1
 }
 
 download_set_path() {
@@ -68,17 +68,12 @@ download_set_path() {
 }
 
 download() {
-    p=$(platform_arm)
-    case $p in
-        arm) download_arm ;;
-        *) download_node ;;
-    esac
+    download_node
     download_set_path
 }
 
 case $1 in
     download) download ;;
-    arm) download_arm ;;
     node) download_node ;;
     path) download_set_path ;;
     help) help "${2:-"--help"}" ;;

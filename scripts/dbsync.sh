@@ -47,21 +47,25 @@ dbsync_dependencies() {
 }
 
 dbsync_download() {
-    print 'INSTALL' "Downloading node binaries"
-    local target="downloads/$DB_SYNC_REMOTE_NAME"
-    local extension=".tar.gz"
-    mkdir -p $target
-    wget -O $target.tar.gz "${DB_SYNC_REMOTE}/${DB_SYNC_VERSION}/${DB_SYNC_REMOTE_NAME}${extension}"
-    if [ $? -eq 0 ]; then
-        tar -xvzf $target.tar.gz -C $target
-        sudo cp -a $target/. $BIN_PATH/
+    require_dbsync_arm64_support
+    print 'INSTALL' "Downloading db-sync binaries"
+    local filenames=($(dbsync_release_filenames))
+    local filename remote="${DB_SYNC_REMOTE}/${DB_SYNC_VERSION}"
+    local extract_dir="downloads/extract"
+
+    if download_release_file "$remote" "${filenames[@]}"; then
+        filename=$DOWNLOAD_RELEASE_FILENAME
+        rm -rf "$extract_dir"
+        mkdir -p "$extract_dir"
+        tar -xvzf "downloads/$filename" -C "$extract_dir"
+        sudo cp -a "$extract_dir/." $BIN_PATH/
         chmod +x -R $BIN_PATH
-        sudo rm -R downloads
+        rm -R downloads
         $DB_SYNC_NAME --version
         print 'INSTALL' "DBSync binaries moved to $BIN_PATH" $green
     else
         rm -R downloads
-        print 'ERROR' "Unable to download binaries" $red
+        print 'ERROR' "Unable to download db-sync binaries for $(platform)/$(platform_arch)" $red
         exit 1
     fi
 }

@@ -238,11 +238,138 @@ platform() {
     fi
 }
 
-platform_arm() {
+platform_arch() {
     ARCH=$(uname -m)
-    if [[ "$ARCH" == "arm"* || "$ARCH" == "aarch64" ]]; then
+    case "$ARCH" in
+        x86_64 | amd64) echo "amd64" ;;
+        arm64 | aarch64 | arm*) echo "arm64" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+platform_arm() {
+    if [[ "$(platform_arch)" == "arm64" ]]; then
         echo "arm"
     fi
+}
+
+version_ge() {
+    [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -1)" == "$2" ]]
+}
+
+require_cardano_node_arm64_version() {
+    if [[ "$(platform_arch)" == "arm64" ]] && ! version_ge "$NODE_VERSION" "10.6.2"; then
+        print 'ERROR' "Node version $NODE_VERSION has no arm64 release. Set NODE_VERSION to 10.6.2 or later." $red
+        exit 1
+    fi
+}
+
+require_dbsync_arm64_support() {
+    if [[ "$(platform)" == "linux" && "$(platform_arch)" == "arm64" ]]; then
+        print 'ERROR' "cardano-db-sync does not publish linux-arm64 release binaries from IntersectMBO." $red
+        exit 1
+    fi
+}
+
+cardano_node_release_filenames() {
+    local version="$NODE_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+
+    case "$os" in
+        windows)
+            echo "cardano-node-${version}-win-amd64.zip"
+            echo "cardano-node-${version}-win64.zip"
+            ;;
+        macos)
+            echo "cardano-node-${version}-macos-${arch}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "cardano-node-${version}-macos.tar.gz"
+            fi
+            ;;
+        linux)
+            echo "cardano-node-${version}-linux-${arch}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "cardano-node-${version}-linux.tar.gz"
+            fi
+            ;;
+        *)
+            print 'ERROR' "Unsupported platform: $os" $red
+            return 1
+            ;;
+    esac
+}
+
+mithril_release_filenames() {
+    local version="$MITHRIL_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+    local suffix="x64"
+    if [[ "$arch" == "arm64" ]]; then
+        suffix="arm64"
+    fi
+
+    case "$os" in
+        windows) echo "mithril-${version}-windows-x64.tar.gz" ;;
+        macos)
+            echo "mithril-${version}-macos-${suffix}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "mithril-${version}-macos-x64.tar.gz"
+            fi
+            ;;
+        linux) echo "mithril-${version}-linux-${suffix}.tar.gz" ;;
+        *)
+            print 'ERROR' "Unsupported platform: $os" $red
+            return 1
+            ;;
+    esac
+}
+
+dbsync_release_filenames() {
+    local version="$DB_SYNC_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+
+    case "$os" in
+        linux)
+            echo "cardano-db-sync-${version}-linux-${arch}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "cardano-db-sync-${version}-linux.tar.gz"
+            fi
+            ;;
+        macos)
+            echo "cardano-db-sync-${version}-macos-${arch}.tar.gz"
+            echo "cardano-db-sync-${version}-macos.tar.gz"
+            ;;
+        windows)
+            print 'ERROR' "cardano-db-sync windows binaries are not published by IntersectMBO" $red
+            return 1
+            ;;
+        *)
+            print 'ERROR' "Unsupported platform: $os" $red
+            return 1
+            ;;
+    esac
+}
+
+download_release_file() {
+    local remote="$1"
+    shift
+    local filename url
+
+    DOWNLOAD_RELEASE_FILENAME=
+    mkdir -p downloads
+    for filename in "$@"; do
+        url="$remote/$filename"
+        print 'DOWNLOAD' "Trying $url" >&2
+        wget -O "downloads/$filename" "$url"
+        if [ $? -eq 0 ]; then
+            DOWNLOAD_RELEASE_FILENAME="$filename"
+            return 0
+        fi
+        rm -f "downloads/$filename"
+    done
+    return 1
 }
 
 platform_ctl() {

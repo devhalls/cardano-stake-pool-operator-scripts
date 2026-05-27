@@ -167,10 +167,15 @@ Read through these options before proceeding to the Node installation.
                 <code>NODE_VERSION</code>
             </td>
             <td>
-                <code>10.5.3</code><br/>
+                <code>11.0.1</code><br/>
             </td>
             <td>
-                <p>The current node version. Must be &gt the version defined here.</p>
+                <p>
+                    The current node version. Must be &gt the version defined here.<br/>
+                    Binaries are downloaded from
+                    <a href="https://github.com/intersectmbo/cardano-node/releases">IntersectMBO cardano-node releases</a>.
+                    Linux and macOS arm64 builds require node version 10.6.2 or later.
+                </p>
             </td>
         </tr>
         <tr>
