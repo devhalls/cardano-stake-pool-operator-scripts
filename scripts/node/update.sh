@@ -23,59 +23,87 @@
 
 source "$(dirname "$0")/../common.sh"
 
+# Private functions
+
+_update_die() {
+    print 'ERROR' "$1" $red
+    return 1
+}
+
+_update_fail() {
+    _update_die "$1" || return 1
+}
+
+_confirm() {
+    read -p "$1 ([y]es or [N]o): "
+    case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
+        y | yes) return 0 ;;
+        *) _update_fail 'Update cancelled' ;;
+    esac
+}
+
+# Public functions
+
 update_target_version() {
     echo $NODE_VERSION
+    return 0
 }
 
 update_current_version() {
-    echo "$($CNNODE --version | awk '{print $2}')"
+    echo "$(cardano_node_version)"
+    return 0
 }
 
 update_check_version() {
+    local latest current
     latest=$(update_target_version)
     current=$(update_current_version)
     if [ "$current" == "$latest" ]; then
         print 'UPDATE' "Cardano node is already up to date (v$current)" $green
-        exit 1
+        return 1
     elif [ -z "$current" ] || [ -z "$latest" ]; then
-        print 'UPDATE' "Unable to read update versions [current:$current] [latest:$latest]" $red
-        exit 1
+        _update_fail "Unable to read update versions [current:$current] [latest:$latest]" || return 1
     else
         echo $latest
+        return 0
     fi
 }
 
 update_binaries() {
     print 'UPDATE' 'Installing node binaries'
     if [[ $NODE_BUILD == 1 ]]; then
-        bash $(dirname "$0")/download.sh download
+        bash "$(dirname "$0")/download.sh" download || _update_fail 'Binary download failed' || return 1
     elif [[ $NODE_BUILD == 2 ]]; then
-        bash $(dirname "$0")/build.sh build
+        bash "$(dirname "$0")/build.sh" build || _update_fail 'Binary build failed' || return 1
     else
         print 'UPDATE' 'Node binaries skipped' $green
     fi
+    return 0
 }
 
 update() {
-    latest=$(update_check_version)
-    confirm "Please confirm update to the new version: $latest?"
-    bash $(dirname "$0")/../node.sh stop
-    update_binaries
-    bash $(dirname "$0")/../node.sh restart
+    local latest
+    latest=$(update_check_version) || return 1
+    _confirm "Please confirm update to the new version: $latest?" || return 1
+    bash "$(dirname "$0")/../node.sh" stop || _update_fail 'Could not stop node service' || return 1
+    update_binaries || return 1
+    bash "$(dirname "$0")/../node.sh" restart || _update_fail 'Could not restart node service' || return 1
     source ~/.bashrc
-    $CNNODE --version
-    $CNCLI --version
+    $CNNODE --version || _update_fail 'Installed cardano-node binary is not runnable' || return 1
+    $CNCLI --version || _update_fail 'Installed cardano-cli binary is not runnable' || return 1
     print 'UPDATE' "Node updated and restarted" $green
+    return 0
 }
 
 case $1 in
-    update) update $@ ;;
+    update) update "$@" ;;
     check) update_check_version ;;
     target) update_target_version ;;
     current) update_current_version ;;
     binaries) update_binaries ;;
-    build) bash $(dirname "$0")/build.sh "${@:2}" ;;
-    download) bash $(dirname "$0")/download.sh "${@:2}" ;;
+    build) bash "$(dirname "$0")/build.sh" "${@:2}" ;;
+    download) bash "$(dirname "$0")/download.sh" "${@:2}" ;;
     help) help "${2:-"--help"}" ;;
-    *) update $@ ;;
+    *) update "$@" ;;
 esac
+exit $?

@@ -33,60 +33,92 @@
 
 source "$(dirname "$0")/common.sh"
 
+# Private functions
+
+_query_die() {
+    print 'ERROR' "$1" $red
+    return 1
+}
+
+_query_fail() {
+    _query_die "$1" || return 1
+}
+
+_require_warm_node() {
+    if is_cold_device; then
+        _query_fail 'This command can not be run on a cold device'
+    fi
+}
+
+_require_producer_node() {
+    if is_not_producer_device; then
+        _query_fail 'This command can only be run on a producer device'
+    fi
+}
+
+# Public functions
+
 query_tip() {
-    exit_if_cold
+    _require_warm_node || return 1
     if [ "$1" ]; then
-        $CNCLI conway query tip $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH | jq -r ".$1" | tr -d '\n\r'
+        $CNCLI conway query tip $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" | jq -r ".$1" | tr -d '\n\r'
     else
-        $CNCLI conway query tip $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH
+        $CNCLI conway query tip $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH"
         echo ''
     fi
+    return 0
 }
 
 query_params() {
-    exit_if_cold
-    $CNCLI conway query protocol-parameters $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH \
-        --out-file $NETWORK_PATH/params.json
+    _require_warm_node || return 1
+    $CNCLI conway query protocol-parameters $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
+        --out-file "$NETWORK_PATH/params.json" || _query_fail 'Could not query protocol parameters' || return 1
     if [ "$1" ]; then
-        cat $NETWORK_PATH/params.json | jq -r ".$1" | tr -d '\n\r'
+        cat "$NETWORK_PATH/params.json" | jq -r ".$1" | tr -d '\n\r'
     else
-        cat $NETWORK_PATH/params.json
+        cat "$NETWORK_PATH/params.json"
         echo ''
     fi
+    return 0
 }
 
 query_state() {
-    exit_if_cold
-    if [ ! -f $NETWORK_PATH/ledger.json ]; then
-        $CNCLI conway query ledger-state $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH > $NETWORK_PATH/ledger.json
+    _require_warm_node || return 1
+    if [ ! -f "$NETWORK_PATH/ledger.json" ]; then
+        $CNCLI conway query ledger-state $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
+            > "$NETWORK_PATH/ledger.json" || _query_fail 'Could not query ledger state' || return 1
     fi
     if [ "$1" ]; then
-        cat $NETWORK_PATH/ledger.json | jq -r ".$1" | tr -d '\n\r'
+        cat "$NETWORK_PATH/ledger.json" | jq -r ".$1" | tr -d '\n\r'
     else
-        cat $NETWORK_PATH/ledger.json
+        cat "$NETWORK_PATH/ledger.json"
         echo ''
     fi
+    return 0
 }
 
 query_metrics() {
-    exit_if_cold
+    _require_warm_node || return 1
     if [ "$1" ]; then
         curl -s localhost:12798/metrics | grep "$1"
     else
         curl -s localhost:12798/metrics
     fi
+    return 0
 }
 
 query_config() {
-    exit_if_file_missing $NETWORK_PATH/$1
-    cat $NETWORK_PATH/$1
+    exit_if_file_missing "$NETWORK_PATH/$1"
+    cat "$NETWORK_PATH/$1"
     echo ''
+    return 0
 }
 
 query_key() {
-    exit_if_file_missing $NETWORK_PATH/keys/$1
-    cat $NETWORK_PATH/keys/$1
+    exit_if_file_missing "$NETWORK_PATH/keys/$1"
+    cat "$NETWORK_PATH/keys/$1"
     echo ''
+    return 0
 }
 
 query_keys() {
@@ -106,11 +138,10 @@ query_keys() {
             else
                 content=$(head -n 1 "$file" | tr -d '\n')
             fi
-            # Print row and truncate if too long
             printf "| %-20s | %-50.50s |\n" "$filename" "$content"
         done
         printf "|%-22s|%-52s|\n" "$(printf '%.0s-' {1..22})" "$(printf '%.0s-' {1..52})"
-        exit 1
+        return 0
     fi
 
     if stat --version >/dev/null 2>&1; then
@@ -143,108 +174,107 @@ query_keys() {
         fi
         echo
     done
+    return 0
 }
 
 query_kes() {
-    exit_if_not_producer
-    exit_if_file_missing $NODE_CERT
-    $CNCLI conway query kes-period-info $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH \
-        --op-cert-file $NODE_CERT
+    _require_producer_node || return 1
+    exit_if_file_missing "$NODE_CERT"
+    $CNCLI conway query kes-period-info $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
+        --op-cert-file "$NODE_CERT"
+    return 0
 }
 
 query_kes_period() {
-    exit_if_cold
-    exit_if_file_missing $NETWORK_PATH/shelley-genesis.json
-    local slotsPerKESPeriod=$(cat $NETWORK_PATH/shelley-genesis.json | jq -r '.slotsPerKESPeriod')
-    local slotNo=$(query_tip slot)
+    _require_warm_node || return 1
+    exit_if_file_missing "$NETWORK_PATH/shelley-genesis.json"
+    local slotsPerKESPeriod=$(cat "$NETWORK_PATH/shelley-genesis.json" | jq -r '.slotsPerKESPeriod')
+    local slotNo=$(query_tip slot) || return 1
     local kesPeriod=$(($slotNo / $slotsPerKESPeriod))
     echo "slotsPerKESPeriod: $slotsPerKESPeriod"
     echo "currentSlot: $slotNo"
     echo "kesPeriod: $kesPeriod"
+    return 0
 }
 
 query_uxto() {
-    exit_if_cold
-    exit_if_file_missing $PAYMENT_ADDR
-    $CNCLI conway query utxo --output-text $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH \
-        --address ${1:-"$(cat $PAYMENT_ADDR)"}
+    _require_warm_node || return 1
+    exit_if_file_missing "$PAYMENT_ADDR"
+    cardano_cli_query_utxo_text "${1:-"$(cat $PAYMENT_ADDR)"}" /dev/stdout || _query_fail 'Could not query UTXO' || return 1
+    return 0
 }
 
 query_leader() {
-    exit_if_not_producer
-    exit_if_file_missing $POOL_ID
+    _require_producer_node || return 1
+    exit_if_file_missing "$POOL_ID"
 
-    # Set the query period and targetEpoch
-    period="--${1:-"next"}"
-    targetEpoch=$(query_tip epoch)
+    local period="--${1:-"next"}"
+    local targetEpoch
+    targetEpoch=$(query_tip epoch) || return 1
     if [[ $period != '--next' && $period != '--current' ]]; then
-        print 'ERROR' "Leadership schedule incorrect period value: $period"
-        exit 0
+        _query_fail "Leadership schedule incorrect period value: $period" || return 1
     fi
     if [ $period == '--next' ]; then targetEpoch=$(($targetEpoch + 1)); fi
 
-    # Set file paths and get the poolId
     local outputPath=$NETWORK_PATH/logs
     local tempFilePath=$outputPath/$targetEpoch.txt
     local csvFile=$outputPath/slots.csv
     local grafanaLocation=/usr/share/grafana
     local poolId=$(<$POOL_ID)
 
-    # Run the leadership-schedule query
     print 'QUERY' "Leadership schedule starting, please wait..."
-    $CNCLI query leadership-schedule $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH \
-        --genesis $NETWORK_PATH/shelley-genesis.json \
-        --stake-pool-id $poolId \
-        --vrf-signing-key-file $VRF_KEY \
-        $period >$tempFilePath
-    if [ $? -ne 0 ]; then
-        print 'ERROR' "Leadership schedule failed to run" $red
-        exit 0
+    mkdir -p "$outputPath" || _query_fail 'Could not create logs directory' || return 1
+    $CNCLI conway query leadership-schedule $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
+        --genesis "$NETWORK_PATH/shelley-genesis.json" \
+        --stake-pool-id "$poolId" \
+        --vrf-signing-key-file "$VRF_KEY" \
+        $period >"$tempFilePath" || _query_fail 'Leadership schedule failed to run' || return 1
+
+    if [ ! -f "$csvFile" ]; then
+        echo 'Time,Slot,No,Epoch' >"$csvFile" || _query_fail 'Could not create slots CSV file' || return 1
     fi
 
-    # Create the CSV file if it does not exist
-    if [ ! -f $csvFile ]; then
-        echo 'Time,Slot,No,Epoch' >$csvFile 2>/dev/null
+    if [ ! -f "$tempFilePath" ]; then
+        _query_fail 'Leadership schedule failed to run' || return 1
     fi
 
-    # Process the output file adding values to $csvFile, echo the result, and copy to grafana folder if it exists
-    if [ -f "$tempFilePath" ]; then
-        content=$(jq -r --arg epoch "$targetEpoch" '
-          to_entries[]
-          | .value as $v
-          | ($v.slotTime
-             | strptime("%Y-%m-%dT%H:%M:%SZ")
-             | strftime("%Y-%m-%d %H:%M:%S")) as $dt
-          | "\($dt),\($v.slotNumber),\(.key + 1),\($epoch)"
-        ' "$tempFilePath")
+    local content
+    content=$(jq -r --arg epoch "$targetEpoch" '
+      to_entries[]
+      | .value as $v
+      | ($v.slotTime
+         | strptime("%Y-%m-%dT%H:%M:%SZ")
+         | strftime("%Y-%m-%d %H:%M:%S")) as $dt
+      | "\($dt),\($v.slotNumber),\(.key + 1),\($epoch)"
+    ' "$tempFilePath") || _query_fail 'Could not parse leadership schedule output' || return 1
 
-        # Append each line if not already in CSV
-        while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            grep -qxF "$line" "$csvFile" || echo "$line" >>"$csvFile"
-        done <<< "$content"
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        grep -qxF "$line" "$csvFile" || echo "$line" >>"$csvFile"
+    done <<< "$content"
 
-        echo "$content"
-        if [ -d "$grafanaLocation" ]; then
-            sudo cp "$csvFile" "$grafanaLocation/slots.csv"
-        fi
-        rm "$tempFilePath"
-    else
-        print 'ERROR' "Leadership schedule failed to run" "$red"
-        exit 0
+    echo "$content"
+    if [ -d "$grafanaLocation" ]; then
+        sudo cp "$csvFile" "$grafanaLocation/slots.csv" || _query_fail 'Could not copy slots CSV to grafana' || return 1
     fi
+    rm "$tempFilePath" || _query_fail 'Could not remove temporary leadership schedule file' || return 1
+    return 0
 }
 
 query_rewards() {
+    _require_warm_node || return 1
+    exit_if_file_missing "$STAKE_ADDR"
+    local data
     data=$(
-        $CNCLI conway query stake-address-info $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH \
-            --address $(<$STAKE_ADDR) | jq '.[0]'
-    )
+        $CNCLI conway query stake-address-info $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
+            --address "$(<$STAKE_ADDR)" | jq '.[0]'
+    ) || _query_fail 'Could not query stake address info' || return 1
     if [ "$1" ]; then
         echo "$data" | jq -r ".$1"
     else
         echo "$data"
     fi
+    return 0
 }
 
 case $1 in
@@ -264,3 +294,4 @@ case $1 in
     help) help "${2:-"--help"}" ;;
     *) help "${1:-"--help"}" ;;
 esac
+exit $?

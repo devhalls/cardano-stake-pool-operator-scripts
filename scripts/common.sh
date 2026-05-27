@@ -3,7 +3,10 @@
 # Define global variables
 
 source_from="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$source_from/.." && pwd)"
 source "$source_from/../env"
+
+CONFIG_SOURCE="$REPO_ROOT/configs/node/$NODE_VERSION/$NODE_NETWORK"
 
 NETWORK_ARG=
 case $NODE_NETWORK in
@@ -21,11 +24,9 @@ esac
 
 CONFIG_DOWNLOADS=(
     "config.json"
-    "config-bp.json"
     "db-sync-config.json"
     "submit-api-config.json"
     "topology.json"
-    "topology-genesis-mode.json"
     "peer-snapshot.json"
     "byron-genesis.json"
     "shelley-genesis.json"
@@ -33,12 +34,17 @@ CONFIG_DOWNLOADS=(
     "conway-genesis.json"
     "guardrails-script.plutus"
 )
-if [[ "$NODE_NETWORK" == "sanchonet" ]]; then
-    CONFIG_DOWNLOADS+=(
-        "topology-non-bootstrap-peers.json"
-        "checkpoints.json"
-    )
-fi
+case $NODE_NETWORK in
+    "mainnet")
+        CONFIG_DOWNLOADS+=("checkpoints.json" "topology-non-bootstrap-peers.json")
+        ;;
+    "preview")
+        CONFIG_DOWNLOADS+=("checkpoints.json")
+        ;;
+    "sanchonet")
+        CONFIG_DOWNLOADS+=("dijkstra-genesis.json" "config-bp.json")
+        ;;
+esac
 
 GUILD_SCRIPT_DOWNLOADS=(
     "gLiveView.sh"
@@ -72,21 +78,6 @@ GOV_ACTION_TYPES=(
     "treasury_withdrawal"
     "info"
 )
-
-# Overrides for sancho
-
-if [ "$NODE_NETWORK" == "sanchonet" ]; then
-    CONFIG_REMOTE="https://raw.githubusercontent.com/Hornan7/SanchoNet-Tutorials/refs/heads/main/genesis/"
-    CONFIG_DOWNLOADS=(
-        "config.json"
-        "topology.json"
-        "byron-genesis.json"
-        "shelley-genesis.json"
-        "alonzo-genesis.json"
-        "conway-genesis.json"
-        "guardrails-script.plutus"
-    )
-fi
 
 # Define global colours
 
@@ -255,6 +246,64 @@ platform_arm() {
 
 version_ge() {
     [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -1)" == "$2" ]]
+}
+
+# Cardano CLI output helpers (plain-text and JSON formats vary across CLI versions)
+
+cardano_cli_version() {
+    local binary="${1:-$CNCLI}"
+    $binary --version 2>/dev/null | awk '{print $2}'
+}
+
+cardano_node_version() {
+    local binary="${1:-$CNNODE}"
+    $binary --version 2>/dev/null | awk '{print $2}'
+}
+
+parse_cardano_cli_min_fee() {
+    local output="$1"
+    if echo "$output" | jq -e 'type == "object"' >/dev/null 2>&1; then
+        echo "$output" | jq -r '.fee // .'
+    else
+        echo "$output" | tr -d '\n\r' | awk '{print $1}'
+    fi
+}
+
+cardano_cli_first_utxo() {
+    local address="$1"
+    local utxo_json
+    utxo_json=$($CNCLI conway query utxo --address "$address" $NETWORK_ARG \
+        --socket-path "$NETWORK_SOCKET_PATH" --output-json 2>/dev/null) || return 1
+    echo "$utxo_json" | jq -r 'if type == "object" then (keys[0] // empty) else empty end'
+}
+
+cardano_cli_query_utxo_text() {
+    local address="$1"
+    local output_file="$2"
+    $CNCLI conway query utxo --output-text $NETWORK_ARG \
+        --socket-path "$NETWORK_SOCKET_PATH" \
+        --address "$address" >"$output_file"
+}
+
+cardano_cli_utxo_text_balances() {
+    local utxo_file="$1"
+    local balance_file="$2"
+    tail -n +3 "$utxo_file" | sort -k3 -nr >"$balance_file"
+}
+
+cardano_cli_utxo_text_field() {
+    local line="$1"
+    local field="$2"
+    case "$field" in
+        txHash) awk '{ print $1 }' <<<"$line" ;;
+        txIx) awk '{ print $2 }' <<<"$line" ;;
+        lovelace) awk '{ print $3 }' <<<"$line" ;;
+        datumType) awk '{ print $6 }' <<<"$line" ;;
+    esac
+}
+
+cardano_cli_utxo_line_spendable() {
+    [[ "$(cardano_cli_utxo_text_field "$1" datumType)" == 'TxOutDatumNone' ]]
 }
 
 require_cardano_node_arm64_version() {
@@ -432,30 +481,51 @@ exit_if_empty() {
     fi
 }
 
+# Guard predicates return 0 when the restriction applies.
+# Prefer these with script-local _fail helpers during script refactors.
+
+is_cold_device() {
+    [[ $NODE_TYPE == 'cold' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+is_not_cold_device() {
+    [[ $NODE_TYPE != 'cold' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+is_not_producer_device() {
+    [[ $NODE_TYPE != 'producer' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+is_not_relay_device() {
+    [[ $NODE_TYPE != 'relay' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+# Guard exits (legacy - prefer predicates with script-local fail helpers)
+
 exit_if_cold() {
-    if [[ $NODE_TYPE == 'cold' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can not be run on a cold device" $red
+    if is_cold_device; then
+        print 'ERROR' 'This command can not be run on a cold device' $red
         exit 1
     fi
 }
 
 exit_if_not_cold() {
-    if [[ $NODE_TYPE != 'cold' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can only be run on a cold device" $red
+    if is_not_cold_device; then
+        print 'ERROR' 'This command can only be run on a cold device' $red
         exit 1
     fi
 }
 
 exit_if_not_producer() {
-    if [[ $NODE_TYPE != 'producer' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can only be run on a producer device" $red
+    if is_not_producer_device; then
+        print 'ERROR' 'This command can only be run on a producer device' $red
         exit 1
     fi
 }
 
 exit_if_not_relay() {
-    if [[ $NODE_TYPE != 'relay' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can only be run on a relay device" $red
+    if is_not_relay_device; then
+        print 'ERROR' 'This command can only be run on a relay device' $red
         exit 1
     fi
 }

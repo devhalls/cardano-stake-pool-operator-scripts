@@ -49,6 +49,37 @@
 
 source "$(dirname "$0")/common.sh"
 
+# Private functions
+
+_node_die() {
+    print 'ERROR' "$1" $red
+    return 1
+}
+
+_node_fail() {
+    _node_die "$1" || return 1
+}
+
+_require_warm_node() {
+    if is_cold_device; then
+        _node_fail 'This command can not be run on a cold device'
+    fi
+}
+
+_require_relay_node() {
+    if is_not_relay_device; then
+        _node_fail 'This command can only be run on a relay device'
+    fi
+}
+
+_require_systemctl() {
+    if ! platform_ctl; then
+        _node_fail 'Systemctl is not available, assuming docker install'
+    fi
+}
+
+# Public functions
+
 node_exec() {
     $CNCLI "${@}"
 }
@@ -74,31 +105,37 @@ node_run() {
             --shelley-vrf-key ${VRF_KEY} \
             --shelley-operational-certificate ${NODE_CERT}
     else
-        print 'ERROR' "Node cannot run as ${NODE_TYPE}" $red
+        _node_fail "Node cannot run as ${NODE_TYPE}" || return 1
     fi
 }
 
 node_start() {
-    exit_if_cold
-    sudo systemctl start $NETWORK_SERVICE
+    _require_warm_node || return 1
+    _require_systemctl || return 1
+    sudo systemctl start "$NETWORK_SERVICE" || _node_fail 'Could not start node service' || return 1
     print 'NODE' "Node service started" $green
+    return 0
 }
 
 node_stop() {
-    exit_if_cold
-    sudo systemctl stop $NETWORK_SERVICE
+    _require_warm_node || return 1
+    _require_systemctl || return 1
+    sudo systemctl stop "$NETWORK_SERVICE" || _node_fail 'Could not stop node service' || return 1
     print 'NODE' "Node service stopped" $green
+    return 0
 }
 
 node_restart() {
-    exit_if_cold
-    sudo systemctl restart $NETWORK_SERVICE
+    _require_warm_node || return 1
+    _require_systemctl || return 1
+    sudo systemctl restart "$NETWORK_SERVICE" || _node_fail 'Could not restart node service' || return 1
     print 'NODE' "Node service restarted" $green
+    return 0
 }
 
 node_watch() {
-    exit_if_cold
-    journalctl -u $NETWORK_SERVICE -f -o cat
+    _require_warm_node || return 1
+    journalctl -u "$NETWORK_SERVICE" -f -o cat
 }
 
 node_status() {
@@ -272,64 +309,70 @@ node_status() {
     tput cnorm
     stty sane
     clear
+    return 0
 }
 
 node_view() {
-    exit_if_cold
-    bash $NETWORK_PATH/scripts/gLiveView.sh "$@"
+    _require_warm_node || return 1
+    bash "$NETWORK_PATH/scripts/gLiveView.sh" "$@"
 }
 
 node_version() {
-    echo "$($CNNODE --version)" | grep -oP 'cardano-node \K[0-9]+(\.[0-9]+)*'
+    cardano_node_version
+    return 0
 }
 
 node_restart_prom() {
-    exit_if_cold
-    sudo systemctl restart $PROMETHEUS_EXPORTER_SERVICE
-    sudo systemctl restart $PROMETHEUS_SCRAPER_SERVICE
+    _require_warm_node || return 1
+    _require_systemctl || return 1
+    sudo systemctl restart "$PROMETHEUS_EXPORTER_SERVICE" || _node_fail 'Could not restart prometheus exporter service' || return 1
+    sudo systemctl restart "$PROMETHEUS_SCRAPER_SERVICE" || _node_fail 'Could not restart prometheus scraper service' || return 1
     print 'NODE' "Prometheus services restarted" $green
+    return 0
 }
 
 node_watch_prom() {
-    exit_if_not_relay
-    journalctl --system -u $PROMETHEUS_SCRAPER_SERVICE --follow
+    _require_relay_node || return 1
+    journalctl --system -u "$PROMETHEUS_SCRAPER_SERVICE" --follow
 }
 
 node_status_prom() {
-    exit_if_not_relay
-    sudo systemctl status $PROMETHEUS_SCRAPER_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl status "$PROMETHEUS_SCRAPER_SERVICE"
 }
 
 node_watch_prom_ex() {
-    exit_if_cold
-    journalctl --system -u $PROMETHEUS_EXPORTER_SERVICE --follow
+    _require_warm_node || return 1
+    journalctl --system -u "$PROMETHEUS_EXPORTER_SERVICE" --follow
 }
 
 node_status_prom_ex() {
-    exit_if_cold
-    sudo systemctl status $PROMETHEUS_EXPORTER_SERVICE
+    _require_warm_node || return 1
+    sudo systemctl status "$PROMETHEUS_EXPORTER_SERVICE"
 }
 
 node_restart_grafana() {
-    exit_if_not_relay
-    sudo systemctl restart $GRAFANA_SERVICE
+    _require_relay_node || return 1
+    _require_systemctl || return 1
+    sudo systemctl restart "$GRAFANA_SERVICE" || _node_fail 'Could not restart grafana service' || return 1
     print 'NODE' "Grafana service restarted" $green
+    return 0
 }
 
 node_watch_grafana() {
-    exit_if_not_relay
-    journalctl --system -u $GRAFANA_SERVICE --follow
+    _require_relay_node || return 1
+    journalctl --system -u "$GRAFANA_SERVICE" --follow
 }
 
 node_status_grafana() {
-    exit_if_not_relay
-    sudo systemctl status $GRAFANA_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl status "$GRAFANA_SERVICE"
 }
 
 case $1 in
-    install) bash $(dirname "$0")/node/install.sh "${@:2}" ;;
-    update) bash $(dirname "$0")/node/update.sh "${@:2}" ;;
-    mithril) bash $(dirname "$0")/node/mithril.sh "${@:2}" ;;
+    install) bash "$(dirname "$0")/node/install.sh" "${@:2}" ;;
+    update) bash "$(dirname "$0")/node/update.sh" "${@:2}" ;;
+    mithril) bash "$(dirname "$0")/node/mithril.sh" "${@:2}" ;;
     exec) node_exec "${@:2}" ;;
     run) node_run ;;
     start) node_start ;;
@@ -350,3 +393,4 @@ case $1 in
     help) help "${2:-"--help"}" ;;
     *) help "${1:-"--help"}" ;;
 esac
+exit $?

@@ -3,19 +3,18 @@
 Scripts and procedures for installing and managing a Cardano node, Mithril node, Midnight node, and operating
 credentials for a Stake Pool, DRep or Constitutional Committee member.
 
-[![Upstream][Upstream-shield]][Upstream-url]
-[![Cardano][Cardano-shield]][Cardano-url]
-[![Midnight][Midnight-shield]][Midnight-url]
-[![Mithril][Mithril-shield]][Mithril-url]
-[![DBSync][DBSync-shield]][DBSync-url]
+[Upstream](https://upstream.org.uk/)
+[Cardano](https://cardano.org/)
+[Midnight](https://midnight.network/)
+[Mithril](https://mithril.network/)
+[DBSync](https://github.com/IntersectMBO/cardano-db-sync/)
 
 For the community by Upstream Stake Pool [UPSTR](https://upstream.org.uk/cardano-staking/). Delegate to Upstream to help
 support our work.
 
 ---
 
-<details>
-<summary>Repository file tree</summary>
+Repository file tree
 
 ```
 tree --filesfirst -L 3
@@ -74,9 +73,7 @@ tree --filesfirst -L 3
     └── squid.service
 ```
 
-</details>
-<details>
-<summary>Assumptions</summary>
+Assumptions
 
 1. Your OS, LAN network, ports, and user are already configured.
 2. The Ngrok script requires you to know how to set up your own ngrok account and endpoints.
@@ -84,7 +81,7 @@ tree --filesfirst -L 3
 4. You are comfortable with Linux and managing networks and servers.
 5. You are able to set up your cold node by copying the binaries, scripts, and keys securely as required.
 
-</details>
+
 
 ---
 
@@ -133,217 +130,29 @@ scripts/tx.sh help
 This table describes the env variables you most likely need to adjust to suit your system and their available options.
 Read through these options before proceeding to the Node installation.
 
-<details>
-<summary>ENV variables</summary>
-<table>
-    <tbody>
-        <tr>
-            <td>
-                <code>COMPOSE_PROJECT_NAME</code>
-            </td>
-            <td>
-                <code>cardano</code>
-            </td>
-            <td>
-                <p>Used to name the docker container (only required if using docker)</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_NETWORK</code>
-            </td>
-            <td>
-                <code>sanchonet</code><br/>
-                <code>preview</code><br/>
-                <code>preprod</code><br/>
-                <code>mainnet</code>
-            </td>
-            <td>
-                <p>One of the supported Cardano networks</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_VERSION</code>
-            </td>
-            <td>
-                <code>11.0.1</code><br/>
-            </td>
-            <td>
-                <p>
-                    The current node version. Must be &gt the version defined here.<br/>
-                    Binaries are downloaded from
-                    <a href="https://github.com/intersectmbo/cardano-node/releases">IntersectMBO cardano-node releases</a>.
-                    Linux and macOS arm64 builds require node version 10.6.2 or later.
-                </p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_HOME</code>
-            </td>
-            <td>
-                <code>"/home/upstream/Cardano"</code>
-            </td>
-            <td>
-                <p>The home folder for your node, usually the root of this repository.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_TYPE</code>
-            </td>
-            <td>
-                <code>relay</code><br/>
-                <code>producer</code><br/>
-                <code>cold</code>
-            </td>
-            <td>
-                <p>The type of node you are running.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_USER</code>
-            </td>
-            <td>
-                <code>upstream</code>
-            </td>
-            <td>
-                <p>The user running the node.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_BUILD</code>
-            </td>
-            <td>
-                <code>0</code><br/>
-                <code>1</code><br/>
-                <code>2</code>
-            </td>
-            <td>
-                <p>
-                    The build type.<br/>
-                    0 = do not build or download binaries.<br/>
-                    1 = downloads node binaries.<br/>
-                    2 = builds node binaries from source.
-                </p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_PORT</code>
-            </td>
-            <td>
-                <code>7777</code>
-            </td>
-            <td>
-                <p>The local node port.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_HOSTADDR</code>
-            </td>
-            <td>
-                <code>0.0.0.0</code>
-            </td>
-            <td>
-                <p>The local node host address.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_KOIOS_API</code>
-            </td>
-            <td>
-                <code>API endpoint</code>
-            </td>
-            <td>
-                <p>API endpoint for koios, used to fetch pool data.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>NODE_SANCHO_CC_API</code>
-            </td>
-            <td>
-                <code>API endpoint</code>
-            </td>
-            <td>
-                <p>API endpoint for sanchonet, used to fetch pool data if using sanchonet, replaces the NODE_KOIOS_API.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>MITHRIL_VERSION</code>
-            </td>
-            <td>
-                <code>2524.0</code>
-            </td>
-            <td>
-                <p>Your mithril version. Must be &gt the version defined here.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>MITHRIL_RELAY_HOST</code>
-            </td>
-            <td>
-                <code>http:192.168.X.X</code>
-            </td>
-            <td>
-                <p>Your mithril relay host address excluding port.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>MITHRIL_RELAY_PORT</code>
-            </td>
-            <td>
-                <code>1234</code>
-            </td>
-            <td>
-                <p>Your mithril relay port.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>BIN_PATH</code>
-            </td>
-            <td>
-                <code>$HOME/local/bin</code>
-            </td>
-            <td>
-                <p>Your users local bin path.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>PACKAGER</code>
-            </td>
-            <td>
-                <code>apt-get</code>
-            </td>
-            <td>
-                <p>System package manager.</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <code>SERVICE_PATH</code>
-            </td>
-            <td>
-                <code>/etc/systemd/system</code>
-            </td>
-            <td>
-                <p>System service path.</p>
-            </td>
-        </tr>
-    </tbody>
-</table>
-</details>
+ENV variables
+
+
+|                        |                                           |                                                                                                                                                                                                                                                            |
+| ---------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `COMPOSE_PROJECT_NAME` | `cardano`                                 | Used to name the docker container (only required if using docker)                                                                                                                                                                                          |
+| `NODE_NETWORK`         | `sanchonet` `preview` `preprod` `mainnet` | One of the supported Cardano networks                                                                                                                                                                                                                      |
+| `NODE_VERSION`         | `11.0.1`                                  | The current node version. Must be > the version defined here. Binaries are downloaded from [IntersectMBO cardano-node releases](https://github.com/intersectmbo/cardano-node/releases). Linux and macOS arm64 builds require node version 10.6.2 or later. |
+| `NODE_HOME`            | `"/home/upstream/Cardano"`                | The home folder for your node, usually the root of this repository.                                                                                                                                                                                        |
+| `NODE_TYPE`            | `relay` `producer` `cold`                 | The type of node you are running.                                                                                                                                                                                                                          |
+| `NODE_USER`            | `upstream`                                | The user running the node.                                                                                                                                                                                                                                 |
+| `NODE_BUILD`           | `0` `1` `2`                               | The build type. 0 = do not build or download binaries. 1 = downloads node binaries. 2 = builds node binaries from source.                                                                                                                                  |
+| `NODE_PORT`            | `7777`                                    | The local node port.                                                                                                                                                                                                                                       |
+| `NODE_HOSTADDR`        | `0.0.0.0`                                 | The local node host address.                                                                                                                                                                                                                               |
+| `NODE_KOIOS_API`       | `API endpoint`                            | API endpoint for koios, used to fetch pool data.                                                                                                                                                                                                           |
+| `NODE_SANCHO_CC_API`   | `API endpoint`                            | API endpoint for sanchonet, used to fetch pool data if using sanchonet, replaces the NODE_KOIOS_API.                                                                                                                                                       |
+| `MITHRIL_VERSION`      | `2524.0`                                  | Your mithril version. Must be > the version defined here.                                                                                                                                                                                                  |
+| `MITHRIL_RELAY_HOST`   | `http:192.168.X.X`                        | Your mithril relay host address excluding port.                                                                                                                                                                                                            |
+| `MITHRIL_RELAY_PORT`   | `1234`                                    | Your mithril relay port.                                                                                                                                                                                                                                   |
+| `BIN_PATH`             | `$HOME/local/bin`                         | Your users local bin path.                                                                                                                                                                                                                                 |
+| `PACKAGER`             | `apt-get`                                 | System package manager.                                                                                                                                                                                                                                    |
+| `SERVICE_PATH`         | `/etc/systemd/system`                     | System service path.                                                                                                                                                                                                                                       |
+
 
 ### Node install
 
@@ -623,142 +432,28 @@ docker exec -it node bash
 
 To register a stake pool, you must have a running **fully synced** node. We can then generate the following assets:
 
-<details>
-<summary>pool assets</summary>
+pool assets
 
-<table>
-    <tbody>
-        <tr>
-            <td>
-                <p><code>payment.vkey</code></p>
-            </td>
-            <td>
-                <p>payment verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>payment.skey</code></p>
-            </td>
-            <td>
-                <p>payment signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>payment.addr</code></p>
-            </td>
-            <td>
-                <p>funded address linked to stake</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>stake.vkey</code></p>
-            </td>
-            <td>
-                <p>staking verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>stake.skey</code></p>
-            </td>
-            <td>
-                <p>staking signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>stake.addr</code></p>
-            </td>
-            <td>
-                <p>registered stake address</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>node.skey</code></p>
-            </td>
-            <td>
-                <p>cold signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>node.vkey</code></p>
-            </td>
-            <td>
-                <p>cold verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>kes.skey</code></p>
-            </td>
-            <td>
-                <p>KES signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>kes.vkey</code></p>
-            </td>
-            <td>
-                <p>KES verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>vrf.skey</code></p>
-            </td>
-            <td>
-                <p>VRF signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>vrf.vkey</code></p>
-            </td>
-            <td>
-                <p>VRF verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>node.cert</code></p>
-            </td>
-            <td>
-                <p>operational certificate</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>node.counter</code></p>
-            </td>
-            <td>
-                <p>issue counter</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p>metadata url</p>
-            </td>
-            <td>
-                Public URL for metadata file
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p>metadata hash</p>
-            </td>
-            <td>
-                Hash of the json file
-            </td>
-        </tr>
-    </tbody>
-</table>
-</details>
+
+|                |                                |
+| -------------- | ------------------------------ |
+| `payment.vkey` | payment verification key       |
+| `payment.skey` | payment signing key            |
+| `payment.addr` | funded address linked to stake |
+| `stake.vkey`   | staking verification key       |
+| `stake.skey`   | staking signing key            |
+| `stake.addr`   | registered stake address       |
+| `node.skey`    | cold signing key               |
+| `node.vkey`    | cold verification key          |
+| `kes.skey`     | KES signing key                |
+| `kes.vkey`     | KES verification key           |
+| `vrf.skey`     | VRF signing key                |
+| `vrf.vkey`     | VRF verification key           |
+| `node.cert`    | operational certificate        |
+| `node.counter` | issue counter                  |
+| metadata url   | Public URL for metadata file   |
+| metadata hash  | Hash of the json file          |
+
 
 ### Generate stake pool keys and certificates
 
@@ -1096,7 +791,7 @@ scripts/tx.sh submit
 
 ### Vote on a governance action as a SPO
 
-Running a Stake Pool requires participation in Cardano governance. From _time to time_ you will need to cast your SPO
+Running a Stake Pool requires participation in Cardano governance. From *time to time* you will need to cast your SPO
 vote for various governance actions.
 
 ```shell
@@ -1156,46 +851,16 @@ scripts/tx.sh submit
 
 To register as a DRep you must have a running **fully synced** node. We can then generate the following assets:
 
-<details>
-<summary>DRep assets</summary>
+DRep assets
 
-<table>
-    <tbody>
-        <tr>
-            <td>
-                <p><code>drep.vkey</code></p>
-            </td>
-            <td>
-                <p>DRep verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>drep.skey</code></p>
-            </td>
-            <td>
-                <p>DRep signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>drep.cert</code></p>
-            </td>
-            <td>
-                <p>DRep certificate</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>drep.id</code></p>
-            </td>
-            <td>
-                <p>DRep ID</p>
-            </td>
-        </tr>
-    </tbody>
-</table>
-</details>
+
+|             |                       |
+| ----------- | --------------------- |
+| `drep.vkey` | DRep verification key |
+| `drep.skey` | DRep signing key      |
+| `drep.cert` | DRep certificate      |
+| `drep.id`   | DRep ID               |
+
 
 ### Generate DRep keys and certificate
 
@@ -1223,7 +888,7 @@ scripts/tx.sh submit
 
 ### Vote on a governance action as a DRep
 
-Being a DRep requires participation in Cardano governance. From _time to time_ you will need to cast your DRep vote for
+Being a DRep requires participation in Cardano governance. From *time to time* you will need to cast your DRep vote for
 various governance actions.
 
 ```shell
@@ -1253,62 +918,18 @@ scripts/tx.sh submit
 To register as a Constitutional Committee member, you must have a running **fully synced** node. We can then generate
 the following assets:
 
-<details>
-<summary>Committee member assets</summary>
+Committee member assets
 
-<table>
-    <tbody>
-        <tr>
-            <td>
-                <p><code>cc-hot.vkey</code></p>
-            </td>
-            <td>
-                <p>Committee hot verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>cc-hot.skey</code></p>
-            </td>
-            <td>
-                <p>Committee hot signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>cc-cold.vkey</code></p>
-            </td>
-            <td>
-                <p>Committee cold verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>cc-cold.skey</code></p>
-            </td>
-            <td>
-                <p>Committee cold signing key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>cc-key.hash</code></p>
-            </td>
-            <td>
-                <p>Hashed cold verification key</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p><code>cc.cert</code></p>
-            </td>
-            <td>
-                <p>Committee hot > cold certificate</p>
-            </td>
-        </tr>
-    </tbody>
-</table>
-</details>
+
+|                |                                  |
+| -------------- | -------------------------------- |
+| `cc-hot.vkey`  | Committee hot verification key   |
+| `cc-hot.skey`  | Committee hot signing key        |
+| `cc-cold.vkey` | Committee cold verification key  |
+| `cc-cold.skey` | Committee cold signing key       |
+| `cc-key.hash`  | Hashed cold verification key     |
+| `cc.cert`      | Committee hot > cold certificate |
+
 
 ### Generate Committee member keys and certificate
 
@@ -1446,8 +1067,8 @@ scripts/node/icebreaker.sh status
 
 You can review icebreaker status using the BlockFrost UI:
 
-- https://blockfrost.grafana.net/public-dashboards/8d618eda298d472a996ca3473ab36177
-- https://platform.blockfrost.io/verification
+- [https://blockfrost.grafana.net/public-dashboards/8d618eda298d472a996ca3473ab36177](https://blockfrost.grafana.net/public-dashboards/8d618eda298d472a996ca3473ab36177)
+- [https://platform.blockfrost.io/verification](https://platform.blockfrost.io/verification)
 
 ---
 
@@ -1455,10 +1076,10 @@ You can review icebreaker status using the BlockFrost UI:
 
 ### Script notation
 
-* `( )` Parenthesis = mandatory parameters.
-* `[ ]` Square brackets = optional parameters.
-* `< >` Angle brackets = parameter types.
-* ` | ` Bar = Choice between several options.
+- `( )` Parenthesis = mandatory parameters.
+- `[ ]` Square brackets = optional parameters.
+- `< >` Angle brackets = parameter types.
+- `|` Bar = Choice between several options.
 
 ```
 Usage: query.sh (
@@ -1470,8 +1091,8 @@ Usage: query.sh (
 
 ### Contributors
 
-* Upstream SPO - [@upstream_ada](https://x.com/Upstream_ada)
-* Devhalls - [@devhalls](https://github.com/devhalls)
+- Upstream SPO - [@upstream_ada](https://x.com/Upstream_ada)
+- Devhalls - [@devhalls](https://github.com/devhalls)
 
 ### Contributing
 
@@ -1493,35 +1114,11 @@ Distributed under the GPL-3.0 License. See LICENSE.txt for more information.
 
 ### Links
 
-- <a href="https://docs.cardano.org/cardano-testnets/tools/faucet/" target="_blank" title="Cardano testnet faucet">
-  Cardano testnet faucet</a>
-- <a href="https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html" target="_blank" title="Db-sync snapshots">
-  Db-sync snapshots</a>
-- <a href="https://upstream.org.uk" target="_blank" title="Upstream SPO website">Upstream SPO website</a>
-- <a href="https://x.com/Upstream_ada" target="_blank" title="Upstream Twitter">Upstream Twitter</a>
-- <a href="https://github.com/devhalls/spo-operational-scripts" target="_blank" title="Upstream Cardano Monitor Scripts">
-  Upstream Cardano Monitor Scripts</a>
-- <a href="https://github.com/Midnight-Scripts/Midnight-Live-View/blob/main/LiveView.sh" target="_blank" title="Midnight Monitoring - LiveView">
-  Midnight Monitoring - LiveView</a>
-- <a href="https://cardano-community.github.io/guild-operators/Scripts/gliveview/" target="_blank" title="Cardano Node Guild Operators LiveView">
-  Cardano Node Guild Operators LiveView</a>
+- [Cardano testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet/)
+- [Db-sync snapshots](https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html)
+- [Upstream SPO website](https://upstream.org.uk)
+- [Upstream Twitter](https://x.com/Upstream_ada)
+- [Upstream Cardano Monitor Scripts](https://github.com/devhalls/spo-operational-scripts)
+- [Midnight Monitoring - LiveView](https://github.com/Midnight-Scripts/Midnight-Live-View/blob/main/LiveView.sh)
+- [Cardano Node Guild Operators LiveView](https://cardano-community.github.io/guild-operators/Scripts/gliveview/)
 
-[Cardano-shield]: https://img.shields.io/badge/cardano-000000?style=for-the-badge&logo=cardano
-
-[Cardano-url]: https://cardano.org/
-
-[Mithril-shield]: https://img.shields.io/badge/mithril-000000?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgNjguOCA2OC44MiI+PGRlZnM+PHN0eWxlPi5jbHMtMXtmaWxsOiNmZmY7fTwvc3R5bGU+PC9kZWZzPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTM0LjQxLDM5LjA4cy01LjA1LDExLjc5LTE0LjQ2LDE3LjFjMy45OCw0LjM0LDguNzQsOC42MSwxNC40NiwxMi42NCw1LjcyLTQuMDMsMTAuNDgtOC4zLDE0LjQ2LTEyLjY0LTkuNDEtNS4zMS0xNC40Ni0xNy4xLTE0LjQ2LTE3LjFaIi8+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMzQuNDEsMTIuNzljLTQuNTgsOS45LTE3LjI0LDE2Ljg1LTI5LjI5LDIwLjA0LDIuMTcsNS4zOCw1LjI2LDExLjIxLDkuNjUsMTcuMDhsMi45LTguNTFjNi42My0zLjk1LDEzLjc0LTguMzIsMTYuNzUtMTQuODQsMy4wMSw2LjUyLDEwLjEyLDEwLjg5LDE2Ljc1LDE0Ljg0bDIuODksOC41MWM0LjM4LTUuODcsNy40Ny0xMS43LDkuNjUtMTcuMDgtMTIuMDUtMy4xOS0yNC43MS0xMC4xNC0yOS4yOS0yMC4wNGgtLjAxWiIvPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTY4LjgsNy44MVM1My4zMywwLDM0LjQxLDAsLjAyLDcuODEuMDIsNy44MUMuMDIsNy44MS0uNDEsMTUuNjcsMi45MywyNi42N2w1LjYzLTguODhjMTAuMzgtMi45OSwyMC43OC03LjMzLDI1Ljg0LTE1LjE3LDUuMDYsNy44NCwxNS40NiwxMi4xOCwyNS44NCwxNS4xN2w1LjYzLDguODhjMy4zNC0xMC45OSwyLjkxLTE4Ljg2LDIuOTEtMTguODZoLjAyWiIvPjwvc3ZnPg==
-
-[Mithril-url]: https://mithril.network/
-
-[Midnight-shield]: https://img.shields.io/badge/midnight-000000?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMjY2Ljg2IDI2Ni44NiI+PGRlZnM+PHN0eWxlPi5jbHMtMXtmaWxsOiNmZmY7fTwvc3R5bGU+PC9kZWZzPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTEzMy40MywwQzU5LjcsMCwwLDU5LjgxLDAsMTMzLjQzczU5LjgxLDEzMy40MywxMzMuNDMsMTMzLjQzLDEzMy40My01OS44MSwxMzMuNDMtMTMzLjQzUzIwNy4xNiwwLDEzMy40MywwWk0xMzMuNDMsMjQyLjMyYy02MC4wMiwwLTEwOC44OS00OC44Ny0xMDguODktMTA4Ljg5UzczLjQxLDI0LjU0LDEzMy40MywyNC41NHMxMDguODksNDguODcsMTA4Ljg5LDEwOC44OS00OC44NywxMDguODktMTA4Ljg5LDEwOC44OWgwWiIvPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTE0NS45NywxMjAuODloLTI1LjA3djI1LjA3aDI1LjA3di0yNS4wN1oiLz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xNDUuOTcsODEuMzhoLTI1LjA3djI1LjA3aDI1LjA3di0yNS4wN1oiLz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xNDUuOTcsNDEuNzVoLTI1LjA3djI1LjA3aDI1LjA3di0yNS4wN1oiLz48L3N2Zz4=
-
-[Midnight-url]: https://midnight.network/
-
-[Upstream-shield]: https://img.shields.io/badge/upstream-000000?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgNTcuMjMgNTcuMjMiPjxkZWZzPjxzdHlsZT4uY2xzLTF7ZmlsbDojZmZmO308L3N0eWxlPjwvZGVmcz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0yOC42MS4yNUMxMi45NS4yNS4yNSwxMi45NS4yNSwyOC42MXMxMi43LDI4LjM3LDI4LjM2LDI4LjM3LDI4LjM3LTEyLjcsMjguMzctMjguMzdTNDQuMjguMjUsMjguNjEuMjVaTTE1LjIzLDM5Ljc5YzAtLjc5LjA3LTEuNi4yMS0yLjM3aC0uMDFzMC0uMDcuMDItLjA5Yy4yMS0uNjUuNDgtMS4xNi43OS0xLjU1LjM0LS40LjcyLS42NiwxLjE4LS43OS43Ni0uMjEsMS42MiwwLDIuNjcuNTkuOTQuNTUsMS45NiwxLjM5LDIuNzMsMi4wNy4zMy4yOC42NS41OC45Ny44Ni4wNCwwLC4wOS4wMi4xNS4wNS4yNi4wOC41LjE1Ljc1LjIyLDEuNTUuNDEsMy4xOS4zOCw0LjczLS4wNi45Ni0uMjgsMS44NC0uNywyLjc5LTEuMTUuNS0uMjUsMS4wMy0uNDksMS41NS0uNzEsMS45Ni0uODMsMy42MS0xLjA0LDUuMDUtLjY1LDEuMzkuMzcsMi45MiwxLjY2LDMuMTUsMy4zMi4wNC4wOC4wNi4xNi4wNi4yNiwwLDEuODEtLjM1LDMuNTYtMS4wNSw1LjIxLS42OCwxLjYtMS42NCwzLjAzLTIuODcsNC4yNS0xLjIyLDEuMjItMi42NiwyLjE5LTQuMjUsMi44Ny0xLjY2LjctMy40LDEuMDUtNS4yMSwxLjA1cy0zLjU3LS4zNS01LjIyLTEuMDVjLTEuNi0uNjgtMy4wMy0xLjY0LTQuMjUtMi44N3MtMi4yLTIuNjctMi44Ny00LjI1Yy0uNy0xLjY2LTEuMDUtMy40LTEuMDUtNS4yMVpNMTguMzgsMjkuNzNjMC0uOTYuMjYtMS41Ni40NC0ydi4wMmMuMDUtLjA4LjA5LS4xNy4xMi0uMjYuMDQtLjA4LjA3LS4xNi4wOS0uMjYuMDktLjI1LjE5LS41Mi4zMS0uNzhMMjguMDcsMy4yOGMuMDgtLjIyLjMtLjM3LjU0LS4zN3MuNDUuMTUuNTQuMzdsOS42OSwyNS42OSwxLjEyLDIuOTZzLjAxLjA2LjAyLjA4Yy4xNi43OC0uMTUsMS4yNy0uNDQsMS41NS0uNTIuNTEtMS40My43Ni0yLjc3Ljc2aC0uMzljLTEuMjYtLjA1LTIuODItLjI4LTQuNjUtLjcxbC0xLjUuNDljLTEuMzMuNDMtMi42OS44Ny00LjE2Ljk1aC0uMzRjLTIuNiwwLTUuMTUtMS4yOS02LjU4LTMuMzQtLjMzLS40Ny0uNzYtMS4xNy0uNzYtMS45N1oiLz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xOS41NywyOS43N2MwLC4xNS4wMi4zNi4xNy42OWgtLjAyYy4wOC4xNi4xOS4zNi4zNi42MS42Mi44OSwxLjUyLDEuNjMsMi41OCwyLjE1LDEuMDYuNTEsMi4yMy43NiwzLjM3LjcsMS4wNi0uMDUsMi4xMS0uMzMsMy4xNS0uNjUuMTYtLjA1LjM0LS4xLjUtLjE2aC4wMnMtLjA1LDAtLjA3LS4wMmMtLjg4LS4yNy0xLjcxLS41Ny0yLjUyLS45OC0xLjE4LS42MS0yLjMzLTEuNDMtMy43My0yLjY5bC0uMDYtLjA2Yy0uNDItLjM3LS44NC0uNzYtMS4yNS0xLjEyLS4zMi0uMjctLjY4LS41Ny0xLjAzLS43OC0uNDgtLjMtLjY2LS4yNy0uNjktLjI2LS4wNCwwLS4wNy4wOC0uMTEuMTgtLjAyLjA2LS4wNS4xLS4wOC4xNS0uMDEuMDUtLjAzLjA5LS4wNS4xNC0uMDMuMDgtLjA3LjE3LS4wOS4yNy0uMDQuMDktLjA4LjItLjEyLjI5LS4xNy40MS0uMzUuODMtLjM1LDEuNTZaIi8+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMjUuNjUsNDAuMTFjLjczLjU5LDEuMzUsMS4wMSwxLjk1LDEuMzQsMS4wMy41NywyLjA2LjksMy40NSwxLjA5LDMuNjkuNTUsNS45OC4yNSw3LjM4LS4zLjU4LS4yMiwxLjAxLS40OSwxLjMzLS43NS4yMy0uMTkuNDEtLjM4LjU1LS41Ny4wMi0uMDIuMDUtLjA2LjA3LS4wOC4yNi0uMzUuMzYtLjY4LjQyLS44N3YtLjIzbC4wMy4wMmMwLS4xMy0uMDMtLjI2LS4wOC0uNC0uMTItLjM4LS4zNi0uNzgtLjctMS4xMy0uNDMtLjQ0LS45OS0uNzgtMS41NS0uOTMtLjA2LS4wMS0uMTMtLjAyLS4xOS0uMDMtLjE2LS4wNC0uMzMtLjA3LS40OS0uMDgtLjI2LS4wMi0uNTItLjA0LS44Mi0uMDFoLS4zYy0uMDYsMC0uMTIuMDEtLjE3LjAyLS4wMywwLS4wOCwwLS4xMi4wMS0uMDcsMC0uMTQuMDItLjIxLjA0LS4xMi4wMi0uMjIuMDUtLjM1LjA3LS4xMy4wMy0uMjYuMDctLjQuMS0uMjcuMDgtLjU1LjE3LS44My4yOC0uMTQuMDYtLjI5LjEtLjQzLjE3LS41LjIxLTEuMDEuNDUtMS41LjctLjk0LjQ1LTEuOTIuOTItMi45NywxLjIzLTEuMzMuMzgtMi43LjQ5LTQuMDcuMzFaIi8+PC9zdmc+
-
-[Upstream-url]: https://upstream.org.uk/
-
-[DBSync-shield]: https://img.shields.io/badge/dbsync-000000?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyBpZD0iSWNvbnMiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDIyIDI4Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZjt9PC9zdHlsZT48L2RlZnM+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMCwxMC40djMuNmMwLDMuNCw0LjgsNiwxMSw2czExLTIuNiwxMS02di0zLjZjLTIuMiwyLjItNi4yLDMuNi0xMSwzLjZTMi4yLDEyLjYsMCwxMC40WiIvPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTAsMTguNHYzLjZjMCwzLjQsNC44LDYsMTEsNnMxMS0yLjYsMTEtNnYtMy42Yy0yLjIsMi4yLTYuMiwzLjYtMTEsMy42cy04LjgtMS40LTExLTMuNloiLz48ZWxsaXBzZSBjbGFzcz0iY2xzLTEiIGN4PSIxMSIgY3k9IjYiIHJ4PSIxMSIgcnk9IjYiLz48L3N2Zz4=
-
-[DBSync-url]: https://github.com/IntersectMBO/cardano-db-sync/

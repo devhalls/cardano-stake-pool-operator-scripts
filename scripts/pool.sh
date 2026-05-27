@@ -218,7 +218,7 @@ pool_get_pool_id() {
 
 pool_get_stake() {
     exit_if_file_missing $POOL_ID
-    $CNCLI query stake-snapshot --stake-pool-id $(cat $POOL_ID) \
+    $CNCLI conway query stake-snapshot --stake-pool-id $(cat $POOL_ID) \
         $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH
 }
 

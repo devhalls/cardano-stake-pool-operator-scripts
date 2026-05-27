@@ -42,20 +42,19 @@ tx_stake_reg_raw() {
     totalBalance=0
     txCount=0
 
-    $CNCLI conway query utxo --socket-path $NETWORK_SOCKET_PATH --address $paymentAddr --output-text $NETWORK_ARG >$outputPath/fullUtxo.out
-    tail -n +3 $outputPath/fullUtxo.out | sort -k3 -nr >$outputPath/balance.out
-    cat $outputPath/balance.out
+    cardano_cli_query_utxo_text "$paymentAddr" "$outputPath/fullUtxo.out"
+    cardano_cli_utxo_text_balances "$outputPath/fullUtxo.out" "$outputPath/balance.out"
+    cat "$outputPath/balance.out"
     while read -r utxo; do
-        type=$(awk '{ print $6 }' <<<"${utxo}")
-        if [[ ${type} == 'TxOutDatumNone' ]]; then
-            inAddr=$(awk '{ print $1 }' <<<"${utxo}")
-            idx=$(awk '{ print $2 }' <<<"${utxo}")
-            utxoBalance=$(awk '{ print $3 }' <<<"${utxo}")
+        if cardano_cli_utxo_line_spendable "$utxo"; then
+            inAddr=$(cardano_cli_utxo_text_field "$utxo" txHash)
+            idx=$(cardano_cli_utxo_text_field "$utxo" txIx)
+            utxoBalance=$(cardano_cli_utxo_text_field "$utxo" lovelace)
             totalBalance=$((${totalBalance} + ${utxoBalance}))
             txIn="${txIn} --tx-in ${inAddr}#${idx}"
         fi
-    done <$outputPath/balance.out
-    txCount=$(cat $outputPath/balance.out | wc -l)
+    done <"$outputPath/balance.out"
+    txCount=$(wc -l < "$outputPath/balance.out" | tr -d ' ')
 
     $CNCLI conway transaction build-raw \
         ${txIn} \
@@ -65,14 +64,14 @@ tx_stake_reg_raw() {
         --out-file $outputPath/tx.tmp \
         --certificate $STAKE_CERT
 
-    fee=$($CNCLI conway transaction calculate-min-fee \
+    fee=$(parse_cardano_cli_min_fee "$($CNCLI conway transaction calculate-min-fee \
         --tx-body-file $outputPath/tx.tmp \
         --tx-in-count ${txCount} \
         --tx-out-count 1 \
         $NETWORK_ARG \
         --witness-count 2 \
         --byron-witness-count 0 \
-        --protocol-params-file $NETWORK_PATH/params.json | awk '{ print $1 }')
+        --protocol-params-file $NETWORK_PATH/params.json)")
 
     txOut=$((${totalBalance} - ${stakeAddressDeposit} - ${fee}))
 
@@ -118,7 +117,7 @@ tx_stake_vote_reg_raw() {
     $CNCLI conway transaction build \
         $NETWORK_ARG \
         --socket-path $NETWORK_SOCKET_PATH \
-        --tx-in $($CNCLI query utxo --address $(<$PAYMENT_ADDR) $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH --output-json | jq -r 'keys[0]') \
+        --tx-in $(cardano_cli_first_utxo "$(<$PAYMENT_ADDR)") \
         --change-address $(<$PAYMENT_ADDR) \
         --certificate-file $DELE_VOTE_CERT \
         --witness-override 2 \
@@ -137,20 +136,19 @@ tx_pool_reg_raw() {
     totalBalance=0
     txCount=0
 
-    $CNCLI conway query utxo --socket-path $NETWORK_SOCKET_PATH --address $paymentAddr --output-text $NETWORK_ARG >$outputPath/fullUtxo.out
-    tail -n +3 $outputPath/fullUtxo.out | sort -k3 -nr >$outputPath/balance.out
-    cat $outputPath/balance.out
+    cardano_cli_query_utxo_text "$paymentAddr" "$outputPath/fullUtxo.out"
+    cardano_cli_utxo_text_balances "$outputPath/fullUtxo.out" "$outputPath/balance.out"
+    cat "$outputPath/balance.out"
     while read -r utxo; do
-        type=$(awk '{ print $6 }' <<<"${utxo}")
-        if [[ ${type} == 'TxOutDatumNone' ]]; then
-            inAddr=$(awk '{ print $1 }' <<<"${utxo}")
-            idx=$(awk '{ print $2 }' <<<"${utxo}")
-            utxoBalance=$(awk '{ print $3 }' <<<"${utxo}")
+        if cardano_cli_utxo_line_spendable "$utxo"; then
+            inAddr=$(cardano_cli_utxo_text_field "$utxo" txHash)
+            idx=$(cardano_cli_utxo_text_field "$utxo" txIx)
+            utxoBalance=$(cardano_cli_utxo_text_field "$utxo" lovelace)
             totalBalance=$((${totalBalance} + ${utxoBalance}))
             txIn="${txIn} --tx-in ${inAddr}#${idx}"
         fi
-    done <$outputPath/balance.out
-    txCount=$(cat $outputPath/balance.out | wc -l)
+    done <"$outputPath/balance.out"
+    txCount=$(wc -l < "$outputPath/balance.out" | tr -d ' ')
 
     $CNCLI conway transaction build-raw \
         ${txIn} \
@@ -161,14 +159,14 @@ tx_pool_reg_raw() {
         --certificate-file $DELE_CERT \
         --out-file $outputPath/tx.tmp
 
-    fee=$($CNCLI conway transaction calculate-min-fee \
+    fee=$(parse_cardano_cli_min_fee "$($CNCLI conway transaction calculate-min-fee \
         --tx-body-file $outputPath/tx.tmp \
         --tx-in-count ${txCount} \
         --tx-out-count 1 \
         $NETWORK_ARG \
         --witness-count 3 \
         --byron-witness-count 0 \
-        --protocol-params-file $NETWORK_PATH/params.json | jq '.fee')
+        --protocol-params-file $NETWORK_PATH/params.json)")
 
     txOut=$((${totalBalance} - ${stakePoolDeposit} - ${fee}))
 
@@ -217,7 +215,7 @@ tx_pool_withdraw_raw() {
     $CNCLI conway transaction build \
         $NETWORK_ARG \
         --socket-path $NETWORK_SOCKET_PATH \
-        --tx-in $($CNCLI query utxo --socket-path $NETWORK_SOCKET_PATH --address $(<$PAYMENT_ADDR) $NETWORK_ARG --output-json | jq -r 'keys[0]') \
+        --tx-in $(cardano_cli_first_utxo "$(<$PAYMENT_ADDR)") \
         --withdrawal "$(<$STAKE_ADDR)+$rewards" \
         --change-address $(<$PAYMENT_ADDR) \
         --witness-override 2 \
@@ -233,7 +231,7 @@ tx_drep_reg_raw() {
     $CNCLI conway transaction build \
         $NETWORK_ARG \
         --socket-path $NETWORK_SOCKET_PATH \
-        --tx-in $($CNCLI query utxo --address $(<$PAYMENT_ADDR) $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH --output-json | jq -r 'keys[0]') \
+        --tx-in $(cardano_cli_first_utxo "$(<$PAYMENT_ADDR)") \
         --change-address $(<$PAYMENT_ADDR) \
         --certificate-file $DREP_CERT \
         --witness-override 2 \
@@ -267,7 +265,7 @@ tx_vote_raw() {
 
     $CNCLI conway transaction build \
         $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH \
-        --tx-in $($CNCLI query utxo --address $(<$PAYMENT_ADDR) $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH --output-json | jq -r 'keys[0]') \
+        --tx-in $(cardano_cli_first_utxo "$(<$PAYMENT_ADDR)") \
         --change-address $(<$PAYMENT_ADDR) \
         --vote-file $votePath \
         --witness-override $witnesses \
@@ -317,23 +315,22 @@ tx_in() {
     txIn=""
 
     # Calculate.
-    bash $(dirname "$0")/query.sh uxto >$outputPath/uxto.out
-    tail -n +3 $outputPath/uxto.out | sort -k3 -nr >$outputPath/balance.out
-    cat $outputPath/balance.out
+    bash "$(dirname "$0")/query.sh" uxto >"$outputPath/uxto.out"
+    cardano_cli_utxo_text_balances "$outputPath/uxto.out" "$outputPath/balance.out"
+    cat "$outputPath/balance.out"
     while read -r utxo; do
-        type=$(awk '{ print $6 }' <<<"${utxo}")
-        if [[ ${type} == 'TxOutDatumNone' ]]; then
-            inAddr=$(awk '{ print $1 }' <<<"${utxo}")
-            idx=$(awk '{ print $2 }' <<<"${utxo}")
-            utxoBalance=$(awk '{ print $3 }' <<<"${utxo}")
+        if cardano_cli_utxo_line_spendable "$utxo"; then
+            inAddr=$(cardano_cli_utxo_text_field "$utxo" txHash)
+            idx=$(cardano_cli_utxo_text_field "$utxo" txIx)
+            utxoBalance=$(cardano_cli_utxo_text_field "$utxo" lovelace)
             totalBalance=$((${totalBalance} + ${utxoBalance}))
             txIn="${txIn} --tx-in ${inAddr}#${idx}"
         fi
-    done <$outputPath/balance.out
+    done <"$outputPath/balance.out"
 
     # Output.
     echo totalBalance: ${totalBalance}
-    echo txCount: $(cat $outputPath/balance.out | wc -l)
+    echo txCount: $(wc -l < "$outputPath/balance.out" | tr -d ' ')
     echo txIn: ${txIn}
 
     # Clean up.
@@ -371,14 +368,14 @@ tx_out() {
         --out-file $outputPath/tx.tmp \
         ${params}
 
-    fee=$($CNCLI conway transaction calculate-min-fee \
+    fee=$(parse_cardano_cli_min_fee "$($CNCLI conway transaction calculate-min-fee \
         --tx-body-file $outputPath/tx.tmp \
         --tx-in-count ${txCount} \
         --tx-out-count 2 \
         $NETWORK_ARG \
         --witness-count $witnessCount \
         --byron-witness-count 0 \
-        --protocol-params-file $NETWORK_PATH/params.json | jq -r '.fee // .')
+        --protocol-params-file $NETWORK_PATH/params.json)")
     txOut=$((${totalBalance} - ${amount} - ${fee}))
 
     # Build the tx.raw (destination output + change output).

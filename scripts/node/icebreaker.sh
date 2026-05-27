@@ -25,31 +25,58 @@
 
 source "$(dirname "$0")/../common.sh"
 
+# Private functions
+
+_icebreaker_die() {
+    print 'ERROR' "$1" $red
+    return 1
+}
+
+_icebreaker_fail() {
+    _icebreaker_die "$1" || return 1
+}
+
+_require_relay_node() {
+    if is_not_relay_device; then
+        _icebreaker_fail 'This command can only be run on a relay device'
+    fi
+}
+
+_require_warm_node() {
+    if is_cold_device; then
+        _icebreaker_fail 'This command can not be run on a cold device'
+    fi
+}
+
+# Public functions
+
 icebreaker_download() {
-    exit_if_not_relay
+    _require_relay_node || return 1
     print 'ICEBREAKER' "Downloading icebreaker binaries"
     curl -fsSL \
          https://github.com/blockfrost/blockfrost-platform/releases/latest/download/curl-bash-install.sh \
-         | bash
+         | bash || _icebreaker_fail 'Could not download icebreaker binaries' || return 1
 
-    source "$HOME/.local/opt/blockfrost-platform/add-to-path.sh"
-    blockfrost-platform --init
+    source "$HOME/.local/opt/blockfrost-platform/add-to-path.sh" || _icebreaker_fail 'Could not source icebreaker path script' || return 1
+    blockfrost-platform --init || _icebreaker_fail 'Could not initialize blockfrost platform' || return 1
+    return 0
 }
 
 icebreaker_install() {
-    exit_if_not_relay
+    _require_relay_node || return 1
+    local dir="$(dirname "$0")/../../services"
     print 'ICEBREAKER' "Creating icebreaker service: $ICEBREAKER_SERVICE"
-    cp -p services/$ICEBREAKER_NAME.service services/$ICEBREAKER_SERVICE.temp
-    sed -i services/$ICEBREAKER_SERVICE.temp \
+    cp -p "$dir/$ICEBREAKER_NAME.service" "$dir/$ICEBREAKER_SERVICE.temp" || _icebreaker_fail 'Could not copy service template' || return 1
+    sed -i "$dir/$ICEBREAKER_SERVICE.temp" \
         -e "s|NODE_USER|$NODE_USER|g" \
         -e "s|NODE_HOME|$NODE_HOME|g" \
         -e "s|ICEBREAKER_NAME|$ICEBREAKER_NAME|g" \
-        -e "s|ICEBREAKER_SERVICE|$ICEBREAKER_SERVICE|g"
-    sudo cp -p services/$ICEBREAKER_SERVICE.temp $SERVICE_PATH/$ICEBREAKER_SERVICE
-    sudo systemctl daemon-reload
-    sudo systemctl enable $ICEBREAKER_SERVICE
-    sudo systemctl start $ICEBREAKER_SERVICE
-    rm services/$ICEBREAKER_SERVICE.temp
+        -e "s|ICEBREAKER_SERVICE|$ICEBREAKER_SERVICE|g" || _icebreaker_fail 'Could not configure service file' || return 1
+    sudo cp -p "$dir/$ICEBREAKER_SERVICE.temp" "$SERVICE_PATH/$ICEBREAKER_SERVICE" || _icebreaker_fail 'Could not install service file' || return 1
+    sudo systemctl daemon-reload || _icebreaker_fail 'Could not reload systemd' || return 1
+    sudo systemctl enable "$ICEBREAKER_SERVICE" || _icebreaker_fail 'Could not enable icebreaker service' || return 1
+    sudo systemctl start "$ICEBREAKER_SERVICE" || _icebreaker_fail 'Could not start icebreaker service' || return 1
+    rm "$dir/$ICEBREAKER_SERVICE.temp" || _icebreaker_fail 'Could not remove temporary service file' || return 1
     print 'ICEBREAKER' "Icebreaker service created: $ICEBREAKER_SERVICE" $green
     return 0
 }
@@ -62,31 +89,34 @@ icebreaker_run() {
 }
 
 icebreaker_start() {
-    exit_if_not_relay
-    sudo systemctl start $ICEBREAKER_SERVICE
-    print 'ICEBREAKER' "Mithril service started" $green
+    _require_relay_node || return 1
+    sudo systemctl start "$ICEBREAKER_SERVICE" || _icebreaker_fail 'Could not start icebreaker service' || return 1
+    print 'ICEBREAKER' "Icebreaker service started" $green
+    return 0
 }
 
 icebreaker_stop() {
-    exit_if_not_relay
-    sudo systemctl stop $ICEBREAKER_SERVICE
-    print 'ICEBREAKER' "Mithril service stopped" $green
+    _require_relay_node || return 1
+    sudo systemctl stop "$ICEBREAKER_SERVICE" || _icebreaker_fail 'Could not stop icebreaker service' || return 1
+    print 'ICEBREAKER' "Icebreaker service stopped" $green
+    return 0
 }
 
 icebreaker_restart() {
-    exit_if_not_relay
-    sudo systemctl restart $ICEBREAKER_SERVICE
-    print 'ICEBREAKER' "Mithril service restarted" $green
+    _require_relay_node || return 1
+    sudo systemctl restart "$ICEBREAKER_SERVICE" || _icebreaker_fail 'Could not restart icebreaker service' || return 1
+    print 'ICEBREAKER' "Icebreaker service restarted" $green
+    return 0
 }
 
 icebreaker_watch() {
-    exit_if_cold
-    journalctl -u $ICEBREAKER_SERVICE -f -o cat
+    _require_warm_node || return 1
+    journalctl -u "$ICEBREAKER_SERVICE" -f -o cat
 }
 
 icebreaker_status() {
-    exit_if_not_relay
-    sudo systemctl status $ICEBREAKER_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl status "$ICEBREAKER_SERVICE"
 }
 
 case $1 in
@@ -101,3 +131,4 @@ case $1 in
     help) help "${2:-"--help"}" ;;
     *) help "${2:-"--help"}" ;;
 esac
+exit $?

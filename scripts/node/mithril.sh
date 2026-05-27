@@ -55,42 +55,81 @@
 
 source "$(dirname "$0")/../common.sh"
 
-extract_mithril_release() {
+# Private functions
+
+_mithril_die() {
+    print 'ERROR' "$1" $red
+    return 1
+}
+
+_mithril_fail() {
+    _mithril_die "$1" || return 1
+}
+
+_require_warm_node() {
+    if is_cold_device; then
+        _mithril_fail 'This command can not be run on a cold device'
+    fi
+}
+
+_require_producer_node() {
+    if is_not_producer_device; then
+        _mithril_fail 'This command can only be run on a producer device'
+    fi
+}
+
+_require_relay_node() {
+    if is_not_relay_device; then
+        _mithril_fail 'This command can only be run on a relay device'
+    fi
+}
+
+_confirm() {
+    read -p "$1 ([y]es or [N]o): "
+    case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
+        y | yes) return 0 ;;
+        *) _mithril_fail 'Mithril update cancelled' ;;
+    esac
+}
+
+_extract_mithril_release() {
     local filename="$1"
     local extract_dir="downloads/extract"
 
     remove_path "$extract_dir"
-    mkdir -p "$extract_dir"
-    tar -xvzf "downloads/$filename" -C "$extract_dir"
-    cp -a "$extract_dir/." "$BIN_PATH/"
+    mkdir -p "$extract_dir" || _mithril_fail 'Could not create extract directory' || return 1
+    tar -xvzf "downloads/$filename" -C "$extract_dir" || _mithril_fail "Could not extract archive: $filename" || return 1
+    cp -a "$extract_dir/." "$BIN_PATH/" || _mithril_fail 'Could not copy mithril binaries to bin path' || return 1
+    return 0
 }
 
+# Public functions
+
 mithril_download() {
-    exit_if_cold
+    _require_warm_node || return 1
     print 'MITHRIL' "Downloading mithril binaries"
-    local filenames=($(mithril_release_filenames))
+    local filenames=($(mithril_release_filenames)) || _mithril_fail "Unsupported platform: $(platform)" || return 1
     local filename
 
     if download_release_file "$MITHRIL_REMOTE" "${filenames[@]}"; then
         filename=$DOWNLOAD_RELEASE_FILENAME
-        extract_mithril_release "$filename"
-        chmod +x -R $BIN_PATH
+        _extract_mithril_release "$filename" || return 1
+        chmod +x -R "$BIN_PATH" || _mithril_fail 'Could not set bin path permissions' || return 1
         remove_path downloads
-        mkdir -p $MITHRIL_PATH
-        echo "$MITHRIL_VERSION" > "$MITHRIL_PATH/version"
-        $MITHRIL_CLIENT --version
-        $MITHRIL_SIGNER --version
+        mkdir -p "$MITHRIL_PATH" || _mithril_fail 'Could not create mithril path' || return 1
+        echo "$MITHRIL_VERSION" > "$MITHRIL_PATH/version" || _mithril_fail 'Could not write mithril version file' || return 1
+        $MITHRIL_CLIENT --version || _mithril_fail 'Downloaded mithril-client binary is not runnable' || return 1
+        $MITHRIL_SIGNER --version || _mithril_fail 'Downloaded mithril-signer binary is not runnable' || return 1
         print 'DOWNLOAD' "Mithril binaries moved to $BIN_PATH" $green
         return 0
     fi
 
     remove_path downloads
-    print 'ERROR' "Unable to download mithril binaries for $(platform)/$(platform_arch)" $red
-    exit 1
+    _mithril_fail "Unable to download mithril binaries for $(platform)/$(platform_arch)" || return 1
 }
 
 mithril_sync() {
-    exit_if_cold
+    _require_warm_node || return 1
     print 'MITHRIL' "Syncing db via mithril"
     export AGGREGATOR_ENDPOINT=$MITHRIL_AGGREGATOR_ENDPOINT
     if [[ $NODE_NETWORK == 'preprod' ]]; then
@@ -100,30 +139,26 @@ mithril_sync() {
     elif [[ $NODE_NETWORK == 'mainnet' ]]; then
         export GENESIS_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
     else
-        print "ERROR" "$NODE_NETWORK is not supported by mithril sync"
-        exit 1
+        _mithril_fail "$NODE_NETWORK is not supported by mithril sync" || return 1
     fi
     export NETWORK=$NODE_NETWORK
 
-    $MITHRIL_CLIENT cardano-db download --download-dir $NETWORK_PATH latest
-
-    if [ $? -ne 0 ]; then
-        print 'MITHRIL' "Unable to sync with mithril" $red
-        exit 1
-    fi
+    $MITHRIL_CLIENT cardano-db download --download-dir "$NETWORK_PATH" latest || _mithril_fail 'Unable to sync with mithril' || return 1
     print 'MITHRIL' "DB synced via mithril, please restart your node" $green
     return 0
 }
 
 mithril_check_compatability() {
-    exit_if_not_producer
+    _require_producer_node || return 1
     print 'MITHRIL' 'Min node version:'
     wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/networks.json |
         jq -r ".\"$NODE_NETWORK\".\"cardano-minimum-version\".\"mithril-signer\""
+    return 0
 }
 
 mithril_update_target_version() {
     echo $MITHRIL_VERSION
+    return 0
 }
 
 mithril_update_current_version() {
@@ -132,6 +167,7 @@ mithril_update_current_version() {
     else
         echo ""
     fi
+    return 0
 }
 
 mithril_update_check_version() {
@@ -140,37 +176,40 @@ mithril_update_check_version() {
     current=$(mithril_update_current_version)
     if [ "$current" == "$latest" ]; then
         print 'UPDATE' "Mithril is already up to date (v$current)" $green
-        exit 1
+        return 1
     elif [ -z "$current" ] || [ -z "$latest" ]; then
-        print 'UPDATE' "Unable to read update versions [current:$current] [latest:$latest]" $red
-        exit 1
+        _mithril_fail "Unable to read update versions [current:$current] [latest:$latest]" || return 1
     else
         echo $latest
+        return 0
     fi
 }
 
 mithril_update() {
-    exit_if_not_producer
+    _require_producer_node || return 1
     local latest
-    latest=$(mithril_update_check_version)
-    confirm "Please confirm mithril update to version: $latest?"
-    mithril_stop
-    mithril_download
-    mithril_restart
-    $MITHRIL_CLIENT --version
-    $MITHRIL_SIGNER --version
+    latest=$(mithril_update_check_version) || return 1
+    _confirm "Please confirm mithril update to version: $latest?" || return 1
+    mithril_stop || return 1
+    mithril_download || return 1
+    mithril_restart || return 1
+    $MITHRIL_CLIENT --version || _mithril_fail 'Installed mithril-client binary is not runnable' || return 1
+    $MITHRIL_SIGNER --version || _mithril_fail 'Installed mithril-signer binary is not runnable' || return 1
     print 'UPDATE' "Mithril updated and restarted" $green
+    return 0
 }
 
 mithril_install_signer_env() {
-    exit_if_not_producer
-    mkdir -p $MITHRIL_PATH
-    rm $MITHRIL_PATH/mithril-signer.env
+    _require_producer_node || return 1
+    mkdir -p "$MITHRIL_PATH" || _mithril_fail 'Could not create mithril path' || return 1
+    rm "$MITHRIL_PATH/mithril-signer.env"
 
-    wget -O $MITHRIL_PATH/verify_signer_registration.sh https://mithril.network/doc/scripts/verify_signer_registration.sh
-    chmod +x $MITHRIL_PATH/verify_signer_registration.sh
-    wget -O $MITHRIL_PATH/verify_signer_signature.sh https://mithril.network/doc/scripts/verify_signer_signature.sh
-    chmod +x $MITHRIL_PATH/verify_signer_signature.sh
+    wget -O "$MITHRIL_PATH/verify_signer_registration.sh" https://mithril.network/doc/scripts/verify_signer_registration.sh || \
+        _mithril_fail 'Could not download verify_signer_registration.sh' || return 1
+    chmod +x "$MITHRIL_PATH/verify_signer_registration.sh" || _mithril_fail 'Could not set verify_signer_registration.sh permissions' || return 1
+    wget -O "$MITHRIL_PATH/verify_signer_signature.sh" https://mithril.network/doc/scripts/verify_signer_signature.sh || \
+        _mithril_fail 'Could not download verify_signer_signature.sh' || return 1
+    chmod +x "$MITHRIL_PATH/verify_signer_signature.sh" || _mithril_fail 'Could not set verify_signer_signature.sh permissions' || return 1
 
     printf "KES_SECRET_KEY_PATH=$KES_KEY
 OPERATIONAL_CERTIFICATE_PATH=$NODE_CERT
@@ -187,67 +226,67 @@ ERA_READER_ADAPTER_PARAMS=$MITHRIL_AGGREGATOR_PARAMS
 ENABLE_METRICS_SERVER=$MITHRIL_PROMETHEUS
 METRICS_SERVER_IP=$MITHRIL_METRICS_SERVER_IP
 METRICS_SERVER_PORT=$MITHRIL_METRICS_SERVER_PORT
-" >$MITHRIL_PATH/mithril-signer.env
+" >"$MITHRIL_PATH/mithril-signer.env" || _mithril_fail 'Could not write mithril-signer.env' || return 1
 
     if [ $MITHRIL_RELAY_HOST ]; then
-        echo "RELAY_ENDPOINT=$MITHRIL_RELAY_HOST:$MITHRIL_RELAY_PORT" >>$MITHRIL_PATH/mithril-signer.env
+        echo "RELAY_ENDPOINT=$MITHRIL_RELAY_HOST:$MITHRIL_RELAY_PORT" >>"$MITHRIL_PATH/mithril-signer.env" || \
+            _mithril_fail 'Could not append relay endpoint to mithril-signer.env' || return 1
     fi
+    return 0
 }
 
 mithril_install_signer_service() {
-    exit_if_not_producer
+    _require_producer_node || return 1
+    local dir="$(dirname "$0")/../../services"
     print 'INSTALL' "Creating mithril signer service: $MITHRIL_SERVICE"
-    cp -p services/$MITHRIL_SERVICE services/$MITHRIL_SERVICE.temp
-    sed -i services/$MITHRIL_SERVICE.temp \
+    cp -p "$dir/mithril.service" "$dir/$MITHRIL_SERVICE.temp" || _mithril_fail 'Could not copy service template' || return 1
+    sed -i "$dir/$MITHRIL_SERVICE.temp" \
         -e "s|NODE_USER|$NODE_USER|g" \
         -e "s|MITHRIL_PATH|$MITHRIL_PATH|g" \
         -e "s|MITHRIL_SIGNER|$MITHRIL_SIGNER|g" \
-        -e "s|MITHRIL_SERVICE|$MITHRIL_SERVICE|g"
-    sudo cp -p services/$MITHRIL_SERVICE.temp $SERVICE_PATH/$MITHRIL_SERVICE
-    sudo systemctl daemon-reload
-    sudo systemctl enable $MITHRIL_SERVICE
-    sudo systemctl start $MITHRIL_SERVICE
-    rm services/$MITHRIL_SERVICE.temp
+        -e "s|MITHRIL_SERVICE|$MITHRIL_SERVICE|g" || _mithril_fail 'Could not configure service file' || return 1
+    sudo cp -p "$dir/$MITHRIL_SERVICE.temp" "$SERVICE_PATH/$MITHRIL_SERVICE" || _mithril_fail 'Could not install service file' || return 1
+    sudo systemctl daemon-reload || _mithril_fail 'Could not reload systemd' || return 1
+    sudo systemctl enable "$MITHRIL_SERVICE" || _mithril_fail 'Could not enable mithril service' || return 1
+    sudo systemctl start "$MITHRIL_SERVICE" || _mithril_fail 'Could not start mithril service' || return 1
+    rm "$dir/$MITHRIL_SERVICE.temp" || _mithril_fail 'Could not remove temporary service file' || return 1
     print 'INSTALL' "Mithril service created: $MITHRIL_SERVICE" $green
     return 0
 }
 
 mithril_install_squid() {
-    exit_if_not_relay
-    mkdir -p downloads
-    wget -O "downloads/squid-$MITHRIL_SQUID_VERSION.tar.gz" "$MITHRIL_SQUID_REMOTE"
-    if [ $? -eq 0 ]; then
-        tar -xvzf downloads/squid-$MITHRIL_SQUID_VERSION.tar.gz -C downloads
-        cd downloads/squid-$MITHRIL_SQUID_VERSION
+    _require_relay_node || return 1
+    mkdir -p downloads || _mithril_fail 'Could not create downloads directory' || return 1
+    wget -O "downloads/squid-$MITHRIL_SQUID_VERSION.tar.gz" "$MITHRIL_SQUID_REMOTE" || _mithril_fail 'Could not download squid' || return 1
+    tar -xvzf "downloads/squid-$MITHRIL_SQUID_VERSION.tar.gz" -C downloads || _mithril_fail 'Could not extract squid archive' || return 1
+    cd "downloads/squid-$MITHRIL_SQUID_VERSION" || _mithril_fail 'Could not enter squid source directory' || return 1
 
-        ./configure \
-            --prefix=/opt/squid \
-            --localstatedir=/opt/squid/var \
-            --libexecdir=/opt/squid/lib/squid \
-            --datadir=/opt/squid/share/squid \
-            --sysconfdir=/etc/squid \
-            --with-default-user=squid \
-            --with-logdir=/opt/squid/var/log/squid \
-            --with-pidfile=/opt/squid/var/run/squid.pid
+    ./configure \
+        --prefix=/opt/squid \
+        --localstatedir=/opt/squid/var \
+        --libexecdir=/opt/squid/lib/squid \
+        --datadir=/opt/squid/share/squid \
+        --sysconfdir=/etc/squid \
+        --with-default-user=squid \
+        --with-logdir=/opt/squid/var/log/squid \
+        --with-pidfile=/opt/squid/var/run/squid.pid || _mithril_fail 'Could not configure squid' || return 1
 
-        make
-        sudo make install
-        /opt/squid/sbin/squid -v
-        remove_path downloads
-    else
-        print 'ERROR' 'Could not install squid' $red
-    fi
+    make || _mithril_fail 'Could not build squid' || return 1
+    sudo make install || _mithril_fail 'Could not install squid' || return 1
+    /opt/squid/sbin/squid -v || _mithril_fail 'Installed squid binary is not runnable' || return 1
+    remove_path downloads
+    return 0
 }
 
 mithril_configure_squid() {
-    exit_if_not_relay
-    ipAddress=$1
+    _require_relay_node || return 1
+    local ipAddress=$1
+    local dir="$(dirname "$0")/../../services"
     if [[ ! $ipAddress ]]; then
-        print 'ERROR' 'Please supply and IP address'
-        exit 1
+        _mithril_fail 'Please supply an IP address' || return 1
     fi
 
-    sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
+    sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak || _mithril_fail 'Could not backup squid.conf' || return 1
     printf "
 # Listening port
 http_port $MITHRIL_RELAY_PORT
@@ -295,88 +334,95 @@ cache deny all
 
 # Deny everything else
 http_access deny all
-" | sudo tee /etc/squid/squid.conf >/dev/null
+" | sudo tee /etc/squid/squid.conf >/dev/null || _mithril_fail 'Could not write squid.conf' || return 1
 
-    sudo adduser --system --no-create-home --group squid
-    sudo chown squid -R /opt/squid/var/
-    sudo chgrp squid -R /opt/squid/var/
+    sudo adduser --system --no-create-home --group squid || _mithril_fail 'Could not create squid user' || return 1
+    sudo chown squid -R /opt/squid/var/ || _mithril_fail 'Could not set squid var ownership' || return 1
+    sudo chgrp squid -R /opt/squid/var/ || _mithril_fail 'Could not set squid var group' || return 1
 
-    sudo cp -p services/$MITHRIL_SQUID_SERVICE /etc/systemd/system/$MITHRIL_SQUID_SERVICE
-    sudo systemctl daemon-reload
-    sudo systemctl start squid
-    sudo systemctl enable squid
+    sudo cp -p "$dir/squid.service" "/etc/systemd/system/$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not install squid service file' || return 1
+    sudo systemctl daemon-reload || _mithril_fail 'Could not reload systemd' || return 1
+    sudo systemctl start squid || _mithril_fail 'Could not start squid service' || return 1
+    sudo systemctl enable squid || _mithril_fail 'Could not enable squid service' || return 1
 
     print 'MITHRIL' 'Squid service started' $green
+    return 0
 }
 
 mithril_start() {
-    exit_if_not_producer
-    sudo systemctl start $MITHRIL_SERVICE
+    _require_producer_node || return 1
+    sudo systemctl start "$MITHRIL_SERVICE" || _mithril_fail 'Could not start mithril service' || return 1
     print 'MITHRIL' "Mithril service started" $green
+    return 0
 }
 
 mithril_stop() {
-    exit_if_not_producer
-    sudo systemctl stop $MITHRIL_SERVICE
+    _require_producer_node || return 1
+    sudo systemctl stop "$MITHRIL_SERVICE" || _mithril_fail 'Could not stop mithril service' || return 1
     print 'MITHRIL' "Mithril service stopped" $green
+    return 0
 }
 
 mithril_restart() {
-    exit_if_not_producer
-    sudo systemctl restart $MITHRIL_SERVICE
+    _require_producer_node || return 1
+    sudo systemctl restart "$MITHRIL_SERVICE" || _mithril_fail 'Could not restart mithril service' || return 1
     print 'MITHRIL' "Mithril service restarted" $green
+    return 0
 }
 
 mithril_watch() {
-    exit_if_cold
-    journalctl -u $MITHRIL_SERVICE -f -o cat
+    _require_warm_node || return 1
+    journalctl -u "$MITHRIL_SERVICE" -f -o cat
 }
 
 mithril_status() {
-    exit_if_not_producer
-    sudo systemctl status $MITHRIL_SERVICE
+    _require_producer_node || return 1
+    sudo systemctl status "$MITHRIL_SERVICE"
 }
 
 mithril_start_squid() {
-    exit_if_not_relay
-    sudo systemctl start $MITHRIL_SQUID_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl start "$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not start squid service' || return 1
     print 'MITHRIL' "Squid service started" $green
+    return 0
 }
 
 mithril_stop_squid() {
-    exit_if_not_relay
-    sudo systemctl stop $MITHRIL_SQUID_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl stop "$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not stop squid service' || return 1
     print 'MITHRIL' "Squid service stopped" $green
+    return 0
 }
 
 mithril_restart_squid() {
-    exit_if_not_relay
-    sudo systemctl restart $MITHRIL_SQUID_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl restart "$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not restart squid service' || return 1
     print 'MITHRIL' "Squid service restarted" $green
+    return 0
 }
 
 mithril_watch_squid() {
-    exit_if_not_relay
-    journalctl -u $MITHRIL_SQUID_SERVICE -f -o cat
+    _require_relay_node || return 1
+    journalctl -u "$MITHRIL_SQUID_SERVICE" -f -o cat
 }
 
 mithril_status_squid() {
-    exit_if_not_relay
-    sudo systemctl status $MITHRIL_SQUID_SERVICE
+    _require_relay_node || return 1
+    sudo systemctl status "$MITHRIL_SQUID_SERVICE"
 }
 
 mithril_verify_signer_registration() {
-    exit_if_not_producer
-    export PARTY_ID=$(<$POOL_ID)
+    _require_producer_node || return 1
+    export PARTY_ID=$(<"$POOL_ID")
     export AGGREGATOR_ENDPOINT=$MITHRIL_AGGREGATOR_ENDPOINT
-    bash $MITHRIL_PATH/verify_signer_registration.sh
+    bash "$MITHRIL_PATH/verify_signer_registration.sh"
 }
 
 mithril_verify_signer_signature() {
-    exit_if_not_producer
-    export PARTY_ID=$(<$POOL_ID)
+    _require_producer_node || return 1
+    export PARTY_ID=$(<"$POOL_ID")
     export AGGREGATOR_ENDPOINT=$MITHRIL_AGGREGATOR_ENDPOINT
-    bash $MITHRIL_PATH/verify_signer_signature.sh
+    bash "$MITHRIL_PATH/verify_signer_signature.sh"
 }
 
 case $1 in
@@ -406,3 +452,4 @@ case $1 in
     help) help "${2:-"--help"}" ;;
     *) help "${2:-"--help"}" ;;
 esac
+exit $?
