@@ -4,6 +4,7 @@
   "ByronGenesisFile": "byron-genesis.json",
   "ByronGenesisHash": "d4b8de7a11d929a323373cbab6c1a9bdc931beffff11db111cf9d57356ee1937",
   "ConsensusMode": "GenesisMode",
+  "EnableP2P": true,
   "ConwayGenesisFile": "conway-genesis.json",
   "ConwayGenesisHash": "0eb6adaec3fcb1fe286c1b4ae0da2a117eafc3add51e17577d36dd39eddfc3db",
   "LastKnownBlockVersion-Alt": 0,

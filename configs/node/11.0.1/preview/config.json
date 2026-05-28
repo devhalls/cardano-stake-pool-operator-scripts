@@ -6,6 +6,7 @@
   "CheckpointsFile": "checkpoints.json",
   "CheckpointsFileHash": "bb5056ff1ced9d68dd99720695789664f6bf6f0cb02a4010df09b813e225ac51",
   "ConsensusMode": "GenesisMode",
+  "EnableP2P": true,
   "ConwayGenesisFile": "conway-genesis.json",
   "ConwayGenesisHash": "9cc5084f02e27210eacba47af0872e3dba8946ad9460b6072d793e1d2f3987ef",
   "ExperimentalHardForksEnabled": false,

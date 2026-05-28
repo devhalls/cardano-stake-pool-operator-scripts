@@ -4,6 +4,7 @@
   "ByronGenesisFile": "byron-genesis.json",
   "ByronGenesisHash": "785eb88427e136378a15b0a152a8bfbeec7a611529ccda29c43a1e60ffb48eaa",
   "ConsensusMode": "GenesisMode",
+  "EnableP2P": true,
   "ConwayGenesisFile": "conway-genesis.json",
   "ConwayGenesisHash": "ff31343b814adddfdcaceb76f635647e2b7d1adfc0ddac7c40b70cbdcd82fed9",
   "DijkstraGenesisFile": "dijkstra-genesis.json",

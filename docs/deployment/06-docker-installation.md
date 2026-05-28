@@ -38,7 +38,6 @@ Once your containers are running, you can run the fixtures and any node operatio
 
 # Run scripts in the container, e.g.
 ./docker/script.sh node.sh view
-./docker/exec.sh node scripts/query.sh uxto
 
 # OR Connect to the cardano node container and work directly from there
 docker exec -it node bash
