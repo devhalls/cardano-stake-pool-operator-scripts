@@ -1,0 +1,21 @@
+# Release 11.0.1 — systemd units and db-sync schema contract
+# SERVICE — template required; deployed unit must match when installed (node stack)
+# OPTIONAL_SERVICE — same checks when installed; skipped when not deployed
+# UNIT_STATIC / OPTIONAL_UNIT_STATIC — templates without substitution
+# PACKAGED — distro units (checked when present)
+# SCHEMA_PIN / SCHEMA_HEAD — only when db-sync is installed in this environment
+
+SERVICE NETWORK_SERVICE cardano-node.service NODE_HOME NODE_USER NODE_NETWORK NETWORK_SERVICE
+
+OPTIONAL_SERVICE DB_SYNC_SERVICE cardano-db-sync.service NODE_HOME NODE_USER DB_SYNC_SERVICE
+OPTIONAL_SERVICE MITHRIL_SERVICE mithril.service NODE_USER MITHRIL_PATH MITHRIL_SIGNER MITHRIL_SERVICE
+OPTIONAL_SERVICE NGROK_SERVICE ngrok.service NODE_USER NGROK_REGION NGROK_ADDR NODE_PORT NGROK_SERVICE
+OPTIONAL_SERVICE ICEBREAKER_SERVICE blockfrost-platform.service NODE_USER NODE_HOME ICEBREAKER_NAME ICEBREAKER_SERVICE
+OPTIONAL_UNIT_STATIC MITHRIL_SQUID_SERVICE squid.service
+
+PACKAGED PROMETHEUS_SCRAPER_SERVICE prometheus.service
+PACKAGED PROMETHEUS_EXPORTER_SERVICE prometheus-node-exporter.service
+PACKAGED GRAFANA_SERVICE grafana-server.service
+
+SCHEMA_PIN DB_SYNC_VERSION 13.6.0.5
+SCHEMA_HEAD migration-4-0008-20240604.sql

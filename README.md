@@ -21,6 +21,8 @@ tree --filesfirst -L 3
 
 ├── LICENSE
 ├── README.md
+├── docs
+│   └── TESTS.md
 ├── env.docker
 ├── env.example
 ├── docker
@@ -32,8 +34,7 @@ tree --filesfirst -L 3
 │   ├── fixture.sh
 │   ├── postgresql.conf
 │   ├── run.sh
-│   ├── script.sh
-│   └── test.sh
+│   └── script.sh
 ├── metadata
 │   ├── anchor.example.json
 │   ├── drep.example.json
@@ -48,7 +49,13 @@ tree --filesfirst -L 3
 │   ├── node.sh
 │   ├── pool.sh
 │   ├── query.sh
+│   ├── test.sh
 │   ├── tx.sh
+│   ├── test
+│   │   ├── fixture.sh
+│   │   ├── integration.sh
+│   │   ├── lib.sh
+│   │   └── smoke.sh
 │   └── node
 │       ├── build.sh
 │       ├── download.sh
@@ -414,7 +421,14 @@ Once your containers are running, you can run the fixtures and any node operatio
 
 # OR Connect to the cardano node container and work directly from there
 docker exec -it node bash
+
+# Run integration tests (see docs/TESTS.md)
+./docker/script.sh test.sh smoke
+./docker/script.sh test.sh all
+./docker/script.sh test.sh report
 ```
+
+See [docs/TESTS.md](docs/TESTS.md) for suite details, fixture flows, and generated test output.
 
 ### Managing the containers
 

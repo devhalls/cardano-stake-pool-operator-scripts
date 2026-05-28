@@ -1,0 +1,6 @@
+# Docker profile overrides for release 11.0.1 (applied when running inside container)
+# PIN = expected value in env.docker / container env
+
+PIN MITHRIL_VERSION 2617.0
+PIN NODE_PORT 6000
+PIN NETWORK_SOCKET_PATH /ipc/node.socket
