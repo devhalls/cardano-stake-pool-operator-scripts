@@ -32,7 +32,7 @@
 #   - drep_dereg_sign) Sign a tx.raw with the $PAYMENT_KEY and $DREP_KEY (witness-count = 2).
 #   - vote_raw) Build raw tx from a vote.raw file (vote.raw is generated using govern.sh functions).
 #   - vote_sign) Sign a tx.raw vote transaction with the vote.raw and $PAYMENT_KEY (witness-count = 2).
-#   - build) Build a transaction from amount, destination address, witness count, and optional params.
+#   - build) Build a transaction from amount, destination address, optional witness count (defaults to 1), and optional params.
 #   - sign) Sign a tx.raw with the passed signing key files.
 #   - submit) Submit a tx.signed to chain.
 #   - help) View this files help. Default value if no option is passed.
@@ -65,6 +65,12 @@ _require_producer_node() {
 _require_file() {
     if [ ! -f "$1" ]; then
         _tx_fail "File $1 does not exist"
+    fi
+}
+
+_require_param() {
+    if [ -z "${1:-}" ]; then
+        _tx_fail "Parameter ${2:-unknown} is empty"
     fi
 }
 
@@ -391,13 +397,14 @@ tx_in() {
             idx=$(cardano_cli_utxo_text_field "$utxo" txIx)
             utxoBalance=$(cardano_cli_utxo_text_field "$utxo" lovelace)
             totalBalance=$((${totalBalance} + ${utxoBalance}))
-            txIn="${txIn} --tx-in ${inAddr}#${idx}"
+            txIn="${txIn} ${inAddr}#${idx}"
+            txCount=$((${txCount} + 1))
         fi
     done <"$outputPath/balance.out"
 
     # Output.
     echo totalBalance: ${totalBalance}
-    echo txCount: $(wc -l < "$outputPath/balance.out" | tr -d ' ')
+    echo txCount: ${txCount}
     echo txIn: ${txIn}
 
     # Clean up.
@@ -412,14 +419,30 @@ tx_out() {
     totalBalance=${3}
     txCount=${4}
     witnessCount=${5}
-    txIn=$(get_option --tx-in "${@:6}")
-    params=${@:8}
+    shift 5
 
-    # get_option returns only values; build --tx-in VALUE for each UTXO
-    txInArgs=""
-    for v in $txIn; do
-        txInArgs="$txInArgs --tx-in $v"
+    local txInArgs=""
+    local -a params=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --*)
+                params=("$@")
+                break
+                ;;
+            *)
+                txInArgs="$txInArgs --tx-in $1"
+                shift
+                ;;
+        esac
     done
+
+    if [ -z "$txInArgs" ]; then
+        _tx_fail 'No spendable UTxOs found for payment address' || return 1
+    fi
+
+    if [ ! -f "$NETWORK_PATH/params.json" ]; then
+        _tx_fail 'Protocol params missing — run scripts/query.sh params' || return 1
+    fi
 
     paymentAddress=$(<$PAYMENT_ADDR)
     currentSlot=$(bash $(dirname "$0")/query.sh tip slot)
@@ -434,7 +457,7 @@ tx_out() {
         --invalid-hereafter $((${currentSlot} + 10000)) \
         --fee 0 \
         --out-file $outputPath/tx.tmp \
-        ${params}
+        "${params[@]}" || _tx_fail 'Could not build temporary transaction' || return 1
 
     fee=$(parse_cardano_cli_min_fee "$($CNCLI conway transaction calculate-min-fee \
         --tx-body-file $outputPath/tx.tmp \
@@ -444,7 +467,16 @@ tx_out() {
         --witness-count $witnessCount \
         --byron-witness-count 0 \
         --protocol-params-file $NETWORK_PATH/params.json)")
+
+    if [ -z "$fee" ] || ! [[ "$fee" =~ ^[0-9]+$ ]]; then
+        _tx_fail 'Could not calculate transaction fee (check witness count and scripts/query.sh params)' || return 1
+    fi
+
     txOut=$((${totalBalance} - ${amount} - ${fee}))
+
+    if [ "$txOut" -lt 0 ]; then
+        _tx_fail "Insufficient balance: need $((amount + fee)) lovelace, have ${totalBalance}" || return 1
+    fi
 
     # Build the tx.raw (destination output + change output).
     $CNCLI conway transaction build-raw \
@@ -453,8 +485,8 @@ tx_out() {
         --tx-out ${paymentAddress}+${txOut} \
         --invalid-hereafter $((${currentSlot} + 10000)) \
         --fee ${fee} \
-        ${params} \
-        --out-file $outputPath/tx.raw
+        "${params[@]}" \
+        --out-file $outputPath/tx.raw || _tx_fail 'Could not build transaction' || return 1
 
     # Output.
     echo fee: $fee
@@ -467,9 +499,29 @@ tx_out() {
 
 tx_build() {
     amount=${1:-0}
-    destination=${2}
-    witnessCount=${3}
-    params="${@:4}"
+    shift
+    local destination
+    local witnessCount=1
+    local -a params=()
+
+    if [ $# -eq 0 ]; then
+        _tx_fail 'Missing destination address or transaction params' || return 1
+    fi
+
+    if [[ "$1" == --* ]]; then
+        destination=$(<"$PAYMENT_ADDR")
+        params=("$@")
+    else
+        destination=$1
+        shift
+        if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+            witnessCount=$1
+            shift
+        fi
+        params=("$@")
+    fi
+
+    _require_param "$destination" 'destination address' || return 1
 
     # Calculate tx input.
     txInput=$(tx_in)
@@ -478,7 +530,7 @@ tx_build() {
     txIn=$(get_param "$txInput" "txIn")
 
     # Calculate tx fee and tx.raw.
-    txOutput=$(tx_out $amount $destination $totalBalance $txCount $witnessCount $txIn $params)
+    txOutput=$(tx_out "$amount" "$destination" "$totalBalance" "$txCount" "$witnessCount" $txIn "${params[@]}")
 
     fee=$(get_param "$txOutput" "fee")
     txRaw=$(get_param "$txOutput" "txRaw")
