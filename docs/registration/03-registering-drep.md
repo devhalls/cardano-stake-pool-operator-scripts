@@ -63,11 +63,12 @@ scripts/tx.sh submit
 De-registration returns your DRep deposit to your payment address.
 
 ```shell
-# PRODUCER: confirm DRep is registered
+# PRODUCER: confirm DRep is registered and note the deposit amount
 scripts/govern.sh drep_state
 
-# COLD: generate de-registration certificate ($DREP_DREG_CERT)
-scripts/govern.sh drep_dreg_cert
+# COLD: generate retirement certificate ($DREP_DREG_CERT)
+# Use the deposit from drep_state if it differs from the current protocol param
+scripts/govern.sh drep_dreg_cert 500000000
 
 # COPY: drep.dereg to your producer node
 # PRODUCER: build a tx with the de-registration certificate

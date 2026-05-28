@@ -8,7 +8,7 @@
 #   drep_state |
 #   drep_keys |
 #   drep_cert (url <STRING>) [deposit <BOOLEAN>] |
-#   drep_dreg_cert |
+#   drep_dreg_cert [deposit <INT>] |
 #   cc_cold_keys |
 #   cc_cold_hash |
 #   cc_hot_keys |
@@ -27,7 +27,7 @@
 #   - drep_state) Retrieve your DRep state.
 #   - drep_keys) Generate DRep keys.
 #   - drep_cert) Generate DRep certificate expecting the passed url for the drep metadata json. Optionally pass second param to update-certificate.
-#   - drep_dreg_cert) Generate DRep de-registration certificate ($DREP_DREG_CERT).
+#   - drep_dreg_cert) Generate DRep retirement certificate ($DREP_DREG_CERT). Optionally pass deposit in lovelace; defaults to protocol param dRepDeposit.
 #   - cc_cold_keys) Generate CC cold keys.
 #   - cc_cold_hash) Generate CC cold hash.
 #   - cc_hot_keys) Generate CC hot keys.
@@ -250,10 +250,14 @@ govern_generate_drep_dreg_cert() {
     _require_cold_node || return 1
     _require_file "$DREP_VKEY" || return 1
     _require_file_missing_or_confirm "$DREP_DREG_CERT" "DRep de-registration certificate already exists! 'yes' to overwrite, 'no' to cancel" || return 1
-    $CNCLI conway governance drep unregistration-certificate \
+    local deposit=${1:-$($CNCLI conway query protocol-parameters $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH | jq .dRepDeposit)}
+    _require_param "$deposit" "1 deposit" || return 1
+    print "GOVERN" "DRep deposit refund: $deposit"
+    $CNCLI conway governance drep retirement-certificate \
         --drep-verification-key-file $DREP_VKEY \
-        --out-file $DREP_DREG_CERT || _govern_fail 'Could not generate DRep de-registration certificate' || return 1
-    print 'GOVERN' "DRep de-registration certificate created at $DREP_DREG_CERT" $green
+        --deposit-amt $deposit \
+        --out-file $DREP_DREG_CERT || _govern_fail 'Could not generate DRep retirement certificate' || return 1
+    print 'GOVERN' "DRep retirement certificate created at $DREP_DREG_CERT" $green
     return 0
 }
 
@@ -317,7 +321,7 @@ case $1 in
     drep_state) govern_drep_state ;;
     drep_keys) govern_generate_drep_keys ;;
     drep_cert) govern_generate_drep_cert "${@:2}" ;;
-    drep_dreg_cert) govern_generate_drep_dreg_cert ;;
+    drep_dreg_cert) govern_generate_drep_dreg_cert "${@:2}" ;;
     cc_cold_keys) govern_generate_cc_cold_keys ;;
     cc_cold_hash) govern_generate_cc_cold_hash ;;
     cc_hot_keys) govern_generate_cc_hot_keys ;;
