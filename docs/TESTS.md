@@ -2,7 +2,8 @@
 
 Script integration tests for the SPO operational toolkit. Each case runs the same `scripts/*.sh` entry points used in production, with per-test pass, fail, or skip reporting.
 
-[README](../README.md) · [scripts/test.sh](../scripts/test.sh) · [Release manifests](../scripts/test/releases/) · [docker/fixture.sh](../docker/fixture.sh) (wallet/pool setup, not part of `test.sh`)
+[scripts/test.sh](../scripts/test.sh) 
+[Release manifests](../scripts/test/releases/)
 
 **Summary:** `smoke` validates env and services against versioned manifests. `integration` runs read-only chain queries when a socket is available. Use `--report` to refresh the generated results section at the bottom of this file.
 
@@ -88,10 +89,11 @@ $NODE_HOME/scripts/test.sh smoke --report
 
 | Test | What it validates |
 |------|-------------------|
-| `smoke_env_release` | Every env var in the release manifest: set, required non-empty, `PIN` values match |
-| `smoke_env_template_drift` | `env.example` (local) or `env.docker` (Docker) keys stay in sync with the manifest |
-| `smoke_services_release` | Systemd templates (required + optional components), packaged units, db-sync schema when installed |
-| `smoke_config_source` | Node config present (repo `configs/` or installed `$NETWORK_PATH/config.json`) |
+| `smoke_env_files` | `env`, `env.example`, and `env.docker` on disk: definitive key set, `REQUIRED` non-empty, `PIN` values per manifest |
+| `smoke_env_runtime` | Sourced runtime env after `common.sh`: same manifest rules plus derived vars (`CONFIG_SOURCE`, `NETWORK_ARG`, `CONFIG_PATH`) |
+| `smoke_services_release` | Service templates in manifest exist, systemd `[Unit]`/`[Service]`/`[Install]` format, substitution placeholders; schema head; deploy diff when systemd available |
+| `smoke_configs_release` | Every file in `<version>.configs.manifest` exists under `configs/node/<version>/<network>/` (all networks); JSON syntax for `*.json` |
+| `smoke_build_release` | `node/build.sh` and `node/download.sh` contract: GHC/Cabal/`NODE_VERSION` pins, lib versions from cardano-node flake.lock, download URL pattern |
 | `smoke_cardano_cli` | `cardano-cli` available (`node.sh version`) |
 | `smoke_help_*` | Each script exposes a `Usage:` help block |
 | `smoke_install_validate` | Fresh install pre-check (skipped when keys already exist) |
@@ -104,15 +106,22 @@ Smoke tests treat **`NODE_VERSION`** (or `--release <VERSION>`) as the repo rele
 
 ### Env (`<version>.manifest` + optional `<version>.docker.manifest`)
 
-- **Local:** template file is [`env.example`](../env.example)
-- **Docker:** template file is [`env.docker`](../env.docker) (mounted at `$NODE_HOME/env.docker`)
-- **`REQUIRED`** — must be non-empty after `source env` + `common.sh`
-- **`OPTIONAL`** — may be empty (ngrok, mithril aggregator, icebreaker secrets, etc.)
-- **`PIN`** — must equal the pinned value for that release (e.g. `NODE_VERSION`, `DB_SYNC_VERSION`)
+Definitive env contract — validated in three on-disk files and at runtime:
 
-`smoke_env_template_drift` fails if a key exists in the template but not in the manifest, or vice versa.
+| File | Manifests applied |
+|------|-------------------|
+| [`env.example`](../env.example) | base `.manifest` |
+| [`env.docker`](../env.docker) | base + `.docker.manifest` |
+| [`env`](../env) (runtime copy) | base; base + docker in container |
 
-**Docker vs local:** the base manifest always applies; `*.docker.manifest` applies only in Docker for extra `PIN` values (socket path, mithril version, etc.). Output includes `env_profile=docker` or `env_profile=local`.
+- **`REQUIRED`** — key present and non-empty in each file checked
+- **`OPTIONAL`** — key present (value may be empty)
+- **`PIN`** — value must match the manifest line for that file/profile
+- Extra keys not listed in the manifest fail the test
+
+`smoke_env_runtime` re-checks the sourced shell after `common.sh` (including docker profile pins).
+
+**Docker:** `env.example` is skipped when not mounted; `env` must exist (entrypoint copies `env.docker` → `env`). **Local:** all three files are required — copy `env.example` → `env` if missing.
 
 ### Services (`<version>.services.manifest`)
 
@@ -124,7 +133,17 @@ Smoke tests treat **`NODE_VERSION`** (or `--release <VERSION>`) as the repo rele
 | `PACKAGED` | Env service name must match the distro unit (`prometheus.service`, etc.) |
 | `SCHEMA_PIN` / `SCHEMA_HEAD` | Only when db-sync is installed (`$DB_SYNC` binary or `$DB_SYNC_PATH/schema` migrations present) |
 
-**Docker vs local:** templates are read from `$REPO_ROOT/services` (mounted in Docker). Systemd deploy diffs are skipped in Docker / non-systemd hosts; template and schema bundle checks still run.
+**Templates:** every `SERVICE` / `OPTIONAL_SERVICE` / `UNIT_STATIC` line must have a file under `services/` with valid systemd unit sections; substitution vars from the manifest must appear in the template.
+
+**Docker vs local:** templates are read from `$REPO_ROOT/services` (mounted in Docker). Deployed-unit diffs are skipped in Docker / non-systemd hosts; template and schema checks still run.
+
+### Configs (`<version>.configs.manifest`)
+
+Lists required files per network under `configs/node/<version>/`. Smoke validates **all** networks in the manifest (not only `$NODE_NETWORK`). JSON files are syntax-checked with `jq` (or `python3` when available).
+
+### Build (`<version>.build.manifest`)
+
+Pins for cardano-node source builds aligned with [11.0.1 release notes](https://github.com/IntersectMBO/cardano-node/releases/tag/11.0.1) (GHC 9.6, Cabal 3.8/3.12): `GHC_VERSION=9.6.7`, `CABAL_VERSION=3.12.1.0`, plus `IOHKNIX_VERSION` / `SODIUM_VERSION` / `SECP256K1_VERSION` / `BLST_VERSION` from the tag `flake.lock`. `smoke_build_release` verifies `node/build.sh` and `node/download.sh` (needs network to resolve upstream pins).
 
 **Optional installs:** node-only setups without db-sync, mithril, ngrok, or icebreaker report `optional component not installed` and do not fail. Schema pins are skipped when db-sync is not installed.
 
@@ -138,14 +157,16 @@ Smoke tests treat **`NODE_VERSION`** (or `--release <VERSION>`) as the repo rele
 
 When you change a **release** (node, db-sync, mithril, schema, or env layout):
 
-1. **`env.example`** and **`env.docker`** — keep keys aligned; docker-only values stay in `env.docker`.
+1. **`env`**, **`env.example`**, and **`env.docker`** — same definitive key set; `PIN` values per file/profile.
 2. **`scripts/test/releases/<version>.manifest`** — add/update `REQUIRED` / `OPTIONAL` / `PIN` for every env key.
 3. **`scripts/test/releases/<version>.docker.manifest`** — Docker-only `PIN` overrides.
 4. **`scripts/test/releases/<version>.services.manifest`** — `SERVICE` lines, substitution vars, `SCHEMA_HEAD` when migrations change.
-5. **`configs/node/<version>/<network>/`** — config trees for pinned `NODE_VERSION` / networks.
-6. Run **`./docker/script.sh test.sh smoke`** before tagging; use **`--report`** to refresh generated results below.
+5. **`scripts/test/releases/<version>.configs.manifest`** — `NETWORK` / `FILE` lines for each network bundle.
+6. **`scripts/test/releases/<version>.build.manifest`** — GHC/Cabal and flake.lock lib pins; re-resolve after bumping `NODE_VERSION`.
+7. **`configs/node/<version>/<network>/`** — files listed in the configs manifest.
+8. Run **`./docker/script.sh test.sh smoke`** before tagging; use **`--report`** to refresh generated results below.
 
-Adding a new release (e.g. `12.0.0`): copy all three manifest files from the previous version, update pins and schema head, then run smoke with `--release 12.0.0`.
+Adding a new release (e.g. `12.0.0`): copy all five manifest files from the previous version, update pins and schema head, then run smoke with `--release 12.0.0`.
 
 ---
 
@@ -172,7 +193,7 @@ Updated automatically by `test.sh --report` or `test.sh report`. Do not edit the
 <!-- TEST_RESULTS_START -->
 ## Last run
 
-- **Time:** 2026-05-28 00:18:05 UTC
+- **Time:** 2026-05-28 00:30:49 UTC
 - **Git:** n/a
 - **Environment:** docker | network=sanchonet | type=relay
 - **Suite:** all
@@ -181,10 +202,10 @@ Updated automatically by `test.sh --report` or `test.sh report`. Do not edit the
 ### Results
 
 ```
-PASS | smoke_env_release
-PASS | smoke_env_template_drift
+PASS | smoke_env_files
+PASS | smoke_env_runtime
 PASS | smoke_services_release
-PASS | smoke_config_source
+PASS | smoke_configs_release
 PASS | smoke_cardano_cli
 PASS | smoke_help_address
 PASS | smoke_help_query

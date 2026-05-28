@@ -63,8 +63,11 @@ build_dependencies() {
                  libssl-dev \
                  libsystemd-dev \
                  libtool \
+                 liburing-dev \
+                 libsnappy-dev \
                  make \
                  pkg-config \
+                 protobuf-compiler \
                  tmux \
                  wget \
                  zlib1g-dev -y || _build_fail 'Could not install build dependencies' || return 1
@@ -82,10 +85,7 @@ build_dependencies() {
     ghcup install cabal $CABAL_VERSION || _build_fail "Could not install cabal $CABAL_VERSION" || return 1
     ghcup set ghc $GHC_VERSION || _build_fail "Could not set ghc $GHC_VERSION" || return 1
     ghcup set cabal $CABAL_VERSION || _build_fail "Could not set cabal $CABAL_VERSION" || return 1
-    IOHKNIX_VERSION="$(curl https://raw.githubusercontent.com/IntersectMBO/cardano-node/$NODE_VERSION/flake.lock | jq -r '.nodes.iohkNix.locked.rev')"
-    SODIUM_VERSION="$(curl https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')"
-    SECP256K1_VERSION="$(curl https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')"
-    BLST_VERSION="$(curl https://raw.githubusercontent.com/input-output-hk/iohk-nix/master/flake.lock | jq -r '.nodes.blst.original.ref')"
+    cardano_build_lib_versions_from_node "$NODE_VERSION" || _build_fail "Could not resolve build lib versions for cardano-node $NODE_VERSION" || return 1
     print 'BUILD' "NODE_VERSION: $NODE_VERSION"
     print 'BUILD' "SODIUM_VERSION: $SODIUM_VERSION"
     print 'BUILD' "IOHKNIX_VERSION: $IOHKNIX_VERSION"
@@ -99,11 +99,9 @@ build_dependencies() {
 
 build_sodium() {
     print 'BUILD' "Installing sodium"
-    IOHKNIX_VERSION="$(curl https://raw.githubusercontent.com/IntersectMBO/cardano-node/$NODE_VERSION/flake.lock | jq -r '.nodes.iohkNix.locked.rev')"
-    SODIUM_VERSION="$(curl https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.sodium.original.rev')"
+    cardano_build_lib_versions_from_node "$NODE_VERSION" || _build_fail "Could not resolve sodium version for $NODE_VERSION" || return 1
     cd ~/src || _build_fail 'Could not enter src directory' || return 1
     sudo rm -R libsodium
-    : ${SODIUM_VERSION:='dbb48cc'}
     git clone https://github.com/intersectmbo/libsodium || _build_fail 'Could not clone libsodium' || return 1
     cd libsodium || _build_fail 'Could not enter libsodium directory' || return 1
     git checkout $SODIUM_VERSION || _build_fail "Could not checkout libsodium $SODIUM_VERSION" || return 1
@@ -124,11 +122,9 @@ build_sodium() {
 
 build_secp() {
     print 'BUILD' 'Installing secp256k1'
-    IOHKNIX_VERSION="$(curl https://raw.githubusercontent.com/IntersectMBO/cardano-node/$NODE_VERSION/flake.lock | jq -r '.nodes.iohkNix.locked.rev')"
-    SECP256K1_VERSION="$(curl https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock | jq -r '.nodes.secp256k1.original.ref')"
+    cardano_build_lib_versions_from_node "$NODE_VERSION" || _build_fail "Could not resolve secp256k1 version for $NODE_VERSION" || return 1
     cd ~/src || _build_fail 'Could not enter src directory' || return 1
     sudo rm -R secp256k1
-    : ${SECP256K1_VERSION:='v0.3.2'}
     git clone --depth 1 --branch ${SECP256K1_VERSION} https://github.com/bitcoin-core/secp256k1 || _build_fail 'Could not clone secp256k1' || return 1
     cd secp256k1 || _build_fail 'Could not enter secp256k1 directory' || return 1
     ./autogen.sh || _build_fail 'Could not autogen secp256k1' || return 1
@@ -142,9 +138,9 @@ build_secp() {
 
 build_blst() {
     print 'BUILD' 'Installing blst'
+    cardano_build_lib_versions_from_node "$NODE_VERSION" || _build_fail "Could not resolve blst version for $NODE_VERSION" || return 1
     cd ~/src || _build_fail 'Could not enter src directory' || return 1
     sudo rm -R blst
-    : ${BLST_VERSION:='v0.3.11'}
     print 'BUILD' "Version: $BLST_VERSION"
     git clone --depth 1 --branch ${BLST_VERSION} https://github.com/supranational/blst || _build_fail 'Could not clone blst' || return 1
     cd blst || _build_fail 'Could not enter blst directory' || return 1

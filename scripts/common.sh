@@ -320,6 +320,39 @@ require_dbsync_arm64_support() {
     fi
 }
 
+# cardano-node source build: lib versions from node tag flake.lock → iohk-nix flake.lock
+cardano_build_iohk_nix_rev() {
+    local node_ver="${1:-$NODE_VERSION}"
+    curl -sf "https://raw.githubusercontent.com/IntersectMBO/cardano-node/${node_ver}/flake.lock" \
+        | jq -r '.nodes.iohkNix.locked.rev'
+}
+
+cardano_build_lib_versions_from_node() {
+    local node_ver="${1:-$NODE_VERSION}"
+    local iohk_flake
+
+    IOHKNIX_VERSION="$(cardano_build_iohk_nix_rev "$node_ver")" || return 1
+    if [ -z "$IOHKNIX_VERSION" ] || [ "$IOHKNIX_VERSION" = "null" ]; then
+        return 1
+    fi
+
+    iohk_flake="$(curl -sf "https://raw.githubusercontent.com/input-output-hk/iohk-nix/${IOHKNIX_VERSION}/flake.lock")" || return 1
+    SODIUM_VERSION="$(echo "$iohk_flake" | jq -r '.nodes.sodium.original.rev')"
+    SECP256K1_VERSION="$(echo "$iohk_flake" | jq -r '.nodes.secp256k1.original.ref')"
+    BLST_VERSION="$(echo "$iohk_flake" | jq -r '.nodes.blst.original.ref')"
+
+    if [ -z "$SODIUM_VERSION" ] || [ "$SODIUM_VERSION" = "null" ]; then
+        return 1
+    fi
+    if [ -z "$SECP256K1_VERSION" ] || [ "$SECP256K1_VERSION" = "null" ]; then
+        return 1
+    fi
+    if [ -z "$BLST_VERSION" ] || [ "$BLST_VERSION" = "null" ]; then
+        return 1
+    fi
+    return 0
+}
+
 cardano_node_release_filenames() {
     local version="$NODE_VERSION"
     local os=$(platform)

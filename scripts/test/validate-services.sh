@@ -74,7 +74,89 @@ services_validate_deployed_path() {
     esac
 }
 
-services_validate_apply_manifest() {
+services_validate_unit_format() {
+    local file="$1"
+    grep -q '^\[Unit\]' "$file" || return 1
+    grep -q '^\[Service\]' "$file" || return 1
+    grep -q '^\[Install\]' "$file" || return 1
+    return 0
+}
+
+services_validate_template_placeholders() {
+    local template="$1"
+    shift
+    local var
+    for var in "$@"; do
+        if ! grep -q "$var" "$template"; then
+            echo "template missing placeholder: $var in $(basename "$template")"
+            return 1
+        fi
+    done
+    return 0
+}
+
+# Templates listed in manifest must exist and match expected systemd layout
+services_validate_templates_manifest() {
+    local manifest="$1"
+    local services_dir errors=0
+    local line kind env_var template subs optional path var
+
+    services_dir="$(services_validate_dir)"
+    if [ -z "$services_dir" ] || [ ! -d "$services_dir" ]; then
+        echo "services directory not found"
+        return 1
+    fi
+
+    echo "services_dir=$services_dir templates_check"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        [ -z "$line" ] && continue
+
+        kind="${line%% *}"
+        line="${line#* }"
+
+        case "$kind" in
+            SERVICE|OPTIONAL_SERVICE|UNIT_STATIC|OPTIONAL_UNIT_STATIC)
+                env_var="${line%% *}"
+                line="${line#* }"
+                template="${line%% *}"
+                if [ "$kind" = "UNIT_STATIC" ] || [ "$kind" = "OPTIONAL_UNIT_STATIC" ]; then
+                    subs=""
+                else
+                    subs="${line#* }"
+                fi
+
+                path="$services_dir/$template"
+                if [ ! -f "$path" ]; then
+                    echo "missing template: $template"
+                    errors=$((errors + 1))
+                    continue
+                fi
+
+                if ! services_validate_unit_format "$path"; then
+                    echo "invalid systemd unit format: $template"
+                    errors=$((errors + 1))
+                fi
+
+                if [ -n "$subs" ]; then
+                    for var in $subs; do
+                        if ! services_validate_template_placeholders "$path" "$var"; then
+                            errors=$((errors + 1))
+                        fi
+                    done
+                fi
+                echo "template ok: $template"
+                ;;
+            PACKAGED|SCHEMA_PIN|SCHEMA_HEAD) ;;
+        esac
+    done <"$manifest"
+
+    [ "$errors" -eq 0 ]
+}
+
+services_validate_deploy_manifest() {
     local manifest="$1"
     local services_dir errors=0
     local line kind env_var template subs optional rendered path
@@ -85,7 +167,7 @@ services_validate_apply_manifest() {
         return 1
     fi
 
-    echo "services_dir=$services_dir"
+    echo "services_dir=$services_dir deploy_check"
 
     while IFS= read -r line || [ -n "$line" ]; do
         line="${line%%#*}"
@@ -207,8 +289,55 @@ services_validate_apply_manifest() {
     [ "$errors" -eq 0 ]
 }
 
+services_validate_schema_manifest() {
+    local manifest="$1"
+    local services_dir errors=0
+    local line kind env_var expected head_file count
+
+    services_dir="$(services_validate_dir)"
+    [ -d "$services_dir" ] || return 1
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        [ -z "$line" ] && continue
+        kind="${line%% *}"
+        line="${line#* }"
+
+        case "$kind" in
+            SCHEMA_PIN)
+                if ! services_validate_dbsync_installed; then
+                    echo "db-sync not installed, skipping schema pin"
+                    continue
+                fi
+                env_var="${line%% *}"
+                expected="${line#* }"
+                if [ "${!env_var}" != "$expected" ]; then
+                    echo "schema pin mismatch: $env_var expected='$expected' actual='${!env_var}'"
+                    errors=$((errors + 1))
+                fi
+                ;;
+            SCHEMA_HEAD)
+                if ! services_validate_dbsync_installed; then
+                    echo "db-sync not installed, skipping schema head"
+                    continue
+                fi
+                head_file="$line"
+                if [ ! -f "$services_dir/schema/$head_file" ]; then
+                    echo "schema head missing: $services_dir/schema/$head_file"
+                    errors=$((errors + 1))
+                fi
+                count="$(find "$services_dir/schema" -maxdepth 1 -name 'migration-*.sql' 2>/dev/null | wc -l | tr -d ' ')"
+                echo "schema migrations: $count files (head=$head_file)"
+                ;;
+        esac
+    done <"$manifest"
+
+    [ "$errors" -eq 0 ]
+}
+
 services_validate_release() {
-    local release manifest
+    local release manifest total=0
 
     release="$(services_validate_release_id)"
     manifest="$(services_validate_manifest_path "$release")"
@@ -226,12 +355,21 @@ services_validate_release() {
         echo "services_profile=local"
     fi
 
-    if ! platform_ctl 2>/dev/null; then
-        echo "systemd deploy diff skipped (docker or non-systemd host); templates and schema still checked"
+    if ! services_validate_templates_manifest "$manifest"; then
+        total=$((total + 1))
     fi
 
-    if ! services_validate_apply_manifest "$manifest"; then
-        return 1
+    if ! services_validate_schema_manifest "$manifest"; then
+        total=$((total + 1))
     fi
-    return 0
+
+    if platform_ctl 2>/dev/null; then
+        if ! services_validate_deploy_manifest "$manifest"; then
+            total=$((total + 1))
+        fi
+    else
+        echo "systemd deploy diff skipped (docker or non-systemd host)"
+    fi
+
+    [ "$total" -eq 0 ]
 }

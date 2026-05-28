@@ -2,10 +2,11 @@
 # Smoke test suite — no live chain required.
 
 run_suite_smoke() {
-    run_test smoke_env_release test_smoke_env_release
-    run_test smoke_env_template_drift test_smoke_env_template_drift
+    run_test smoke_env_files test_smoke_env_files
+    run_test smoke_env_runtime test_smoke_env_runtime
     run_test smoke_services_release test_smoke_services_release
-    run_test smoke_config_source test_smoke_config_source
+    run_test smoke_configs_release test_smoke_configs_release
+    run_test smoke_build_release test_smoke_build_release
     run_test smoke_cardano_cli test_smoke_cardano_cli
     run_test smoke_help_address test_smoke_help_address
     run_test smoke_help_query test_smoke_help_query
@@ -22,10 +23,11 @@ run_suite_smoke() {
 
 list_suite_smoke() {
     echo "smoke:"
-    echo "  smoke_env_release"
-    echo "  smoke_env_template_drift"
+    echo "  smoke_env_files"
+    echo "  smoke_env_runtime"
     echo "  smoke_services_release"
-    echo "  smoke_config_source"
+    echo "  smoke_configs_release"
+    echo "  smoke_build_release"
     echo "  smoke_cardano_cli"
     echo "  smoke_help_address"
     echo "  smoke_help_query"
@@ -40,28 +42,24 @@ list_suite_smoke() {
     echo "  smoke_install_validate"
 }
 
-test_smoke_env_release() {
-    env_validate_release
+test_smoke_env_files() {
+    env_validate_env_files
 }
 
-test_smoke_env_template_drift() {
-    env_validate_template_drift
+test_smoke_env_runtime() {
+    env_validate_release
 }
 
 test_smoke_services_release() {
     services_validate_release
 }
 
-test_smoke_config_source() {
-    # Repo layout (local / full checkout) or installed copy (docker after node.sh install)
-    if [ -d "$CONFIG_SOURCE" ] && [ -f "$CONFIG_SOURCE/config.json" ]; then
-        return 0
-    fi
-    if [ -f "$NETWORK_PATH/config.json" ]; then
-        return 0
-    fi
-    echo "Config not found at $CONFIG_SOURCE (repo) or $NETWORK_PATH/config.json (installed)"
-    return 1
+test_smoke_configs_release() {
+    configs_validate_release
+}
+
+test_smoke_build_release() {
+    build_validate_release
 }
 
 test_smoke_cardano_cli() {

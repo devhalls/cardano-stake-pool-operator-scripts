@@ -21,6 +21,8 @@ source "$(dirname "$0")/common.sh"
 source "$(dirname "$0")/test/lib.sh"
 source "$(dirname "$0")/test/validate-env.sh"
 source "$(dirname "$0")/test/validate-services.sh"
+source "$(dirname "$0")/test/validate-configs.sh"
+source "$(dirname "$0")/test/validate-build.sh"
 source "$(dirname "$0")/test/smoke.sh"
 source "$(dirname "$0")/test/integration.sh"
 

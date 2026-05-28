@@ -1,0 +1,17 @@
+# Release 11.0.1 — cardano-node source build and download contract
+# PIN values from cardano-node tag flake.lock + IntersectMBO 11.0.1 release notes
+# GHC/CABAL must match env manifest (compiler used by node/build.sh)
+
+PIN NODE_VERSION 11.0.1
+PIN GHC_VERSION 9.6.7
+PIN CABAL_VERSION 3.12.1.0
+PIN IOHKNIX_VERSION 9de00113c11ba8cac908a63acf34b193cda7475b
+PIN SODIUM_VERSION dbb48cce5429cb6585c9034f002568964f1ce567
+PIN SECP256K1_VERSION v0.3.2
+PIN BLST_VERSION v0.3.15
+
+# Download URL pattern (NODE_REMOTE in env uses $NODE_VERSION substitution)
+PIN NODE_REMOTE_PREFIX https://github.com/IntersectMBO/cardano-node/releases/download/
+
+SCRIPT node/build.sh
+SCRIPT node/download.sh

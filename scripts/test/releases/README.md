@@ -6,9 +6,11 @@ Each repo release (`NODE_VERSION`, e.g. `11.0.1`) is described by manifest files
 
 | File | Purpose |
 |------|---------|
-| `<version>.manifest` | Env vars: `REQUIRED`, `OPTIONAL`, `PIN` |
-| `<version>.docker.manifest` | Extra env `PIN` lines for Docker (`env.docker`) |
-| `<version>.services.manifest` | Systemd templates, optional components, packaged units, db-sync schema head |
+| `<version>.manifest` | Env vars: `REQUIRED`, `OPTIONAL`, `PIN` — validated in `env`, `env.example`, `env.docker`, and runtime shell |
+| `<version>.docker.manifest` | Extra env `PIN` lines for Docker (`env.docker` and container `env`) |
+| `<version>.services.manifest` | Systemd unit templates (existence, format, placeholders), deploy diff, db-sync schema |
+| `<version>.configs.manifest` | Per-network files under `configs/node/<version>/<network>/` |
+| `<version>.build.manifest` | Source-build lib pins (flake.lock), GHC/Cabal, `node/build.sh` / `node/download.sh` contract |
 
 ## When bumping a release
 
@@ -22,7 +24,10 @@ Each repo release (`NODE_VERSION`, e.g. `11.0.1`) is described by manifest files
    done
    ```
 4. Update **`.services.manifest`** if templates, `SERVICE` / `OPTIONAL_SERVICE` lines, substitution lists, or db-sync schema head migration change.
-5. Run `./scripts/test.sh smoke --release <version>` (or `./docker/script.sh test.sh smoke`).
+5. Update **`.configs.manifest`** when adding/removing network config files under `configs/node/<version>/`.
+6. Update **`.build.manifest`** when `cardano-node` tag flake.lock changes (iohk-nix / libsodium / secp / blst) or supported GHC/Cabal changes.
+7. Keep **`env`**, **`env.example`**, and **`env.docker`** in sync with the env manifests (same key set; `PIN` values per file).
+8. Run `./scripts/test.sh smoke --release <version>` (or `./docker/script.sh test.sh smoke`). `smoke_build_release` resolves upstream flake.lock (needs network).
 
 ## Schema head
 
