@@ -8,6 +8,7 @@
 #   drep_state |
 #   drep_keys |
 #   drep_cert (url <STRING>) [deposit <BOOLEAN>] |
+#   drep_dreg_cert |
 #   cc_cold_keys |
 #   cc_cold_hash |
 #   cc_hot_keys |
@@ -26,6 +27,7 @@
 #   - drep_state) Retrieve your DRep state.
 #   - drep_keys) Generate DRep keys.
 #   - drep_cert) Generate DRep certificate expecting the passed url for the drep metadata json. Optionally pass second param to update-certificate.
+#   - drep_dreg_cert) Generate DRep de-registration certificate ($DREP_DREG_CERT).
 #   - cc_cold_keys) Generate CC cold keys.
 #   - cc_cold_hash) Generate CC cold hash.
 #   - cc_hot_keys) Generate CC hot keys.
@@ -193,23 +195,12 @@ govern_drep_id() {
 
 govern_drep_state() {
     _require_warm_node || return 1
-    $CNCLI conway query drep-state --drep-key-hash $(govern_drep_id --output-hex) $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH
+    _require_file "$DREP_VKEY" || return 1
+    $CNCLI conway query drep-state \
+        --drep-key-hash "$(govern_drep_id --output-hex)" \
+        $NETWORK_ARG \
+        --socket-path $NETWORK_SOCKET_PATH
     return $?
-}
-
-govern_drep_id() {
-    exit_if_not_producer
-    local format="${1:-"--output-bech32"}"
-    $CNCLI conway governance drep id \
-        --drep-verification-key-file $DREP_VKEY \
-        $format \
-        --out-file $DREP_ID
-    cat $DREP_ID
-}
-
-govern_drep_state() {
-    exit_if_cold
-    $CNCLI conway query drep-state --drep-key-hash $(govern_drep_id hex) $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH
 }
 
 govern_generate_drep_keys() {
@@ -252,6 +243,17 @@ govern_generate_drep_cert() {
     fi
 
     print 'GOVERN' "DRep certificate created at $DREP_CERT" $green
+    return 0
+}
+
+govern_generate_drep_dreg_cert() {
+    _require_cold_node || return 1
+    _require_file "$DREP_VKEY" || return 1
+    _require_file_missing_or_confirm "$DREP_DREG_CERT" "DRep de-registration certificate already exists! 'yes' to overwrite, 'no' to cancel" || return 1
+    $CNCLI conway governance drep unregistration-certificate \
+        --drep-verification-key-file $DREP_VKEY \
+        --out-file $DREP_DREG_CERT || _govern_fail 'Could not generate DRep de-registration certificate' || return 1
+    print 'GOVERN' "DRep de-registration certificate created at $DREP_DREG_CERT" $green
     return 0
 }
 
@@ -315,6 +317,7 @@ case $1 in
     drep_state) govern_drep_state ;;
     drep_keys) govern_generate_drep_keys ;;
     drep_cert) govern_generate_drep_cert "${@:2}" ;;
+    drep_dreg_cert) govern_generate_drep_dreg_cert ;;
     cc_cold_keys) govern_generate_cc_cold_keys ;;
     cc_cold_hash) govern_generate_cc_cold_hash ;;
     cc_hot_keys) govern_generate_cc_hot_keys ;;

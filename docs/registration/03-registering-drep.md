@@ -30,6 +30,7 @@ DRep assets
 | `drep.vkey` | DRep verification key |
 | `drep.skey` | DRep signing key      |
 | `drep.cert` | DRep certificate      |
+| `drep.dereg`| DRep de-registration certificate |
 | `drep.id`   | DRep ID               |
 
 
@@ -54,6 +55,30 @@ scripts/tx.sh drep_reg_sign
 
 # COPY: tx.signed to your producer node
 # PRODUCER: Submit the transaction
+scripts/tx.sh submit
+```
+
+### De-registering a DRep
+
+De-registration returns your DRep deposit to your payment address.
+
+```shell
+# PRODUCER: confirm DRep is registered
+scripts/govern.sh drep_state
+
+# COLD: generate de-registration certificate ($DREP_DREG_CERT)
+scripts/govern.sh drep_dreg_cert
+
+# COPY: drep.dereg to your producer node
+# PRODUCER: build a tx with the de-registration certificate
+scripts/tx.sh drep_dereg_raw
+
+# COPY: tx.raw to your cold node
+# COLD: sign the transaction
+scripts/tx.sh drep_dereg_sign
+
+# COPY: tx.signed to your producer node
+# PRODUCER: submit the transaction
 scripts/tx.sh submit
 ```
 

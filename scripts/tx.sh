@@ -8,6 +8,8 @@
 #   pool_withdraw_raw |
 #   drep_reg_raw |
 #   drep_reg_sign |
+#   drep_dereg_raw |
+#   drep_dereg_sign |
 #   vote_raw [witnesses <INT>] |
 #   vote_sign [voteKey <STRING<'node'|'drep'|'cc'>>] |
 #   build (amount <INT>) (address <STRING>) [witnesses <INT>] [...params<MIXED>] |
@@ -26,6 +28,8 @@
 #   - pool_withdraw_raw) Build raw tx for pool withdraw rewards.
 #   - drep_reg_raw) Build raw tx for drep registration with the $DREP_CERT.
 #   - drep_reg_sign) Sign a tx.raw with the $PAYMENT_KEY and $DREP_KEY (witness-count = 2).
+#   - drep_dereg_raw) Build raw tx for DRep de-registration with the $DREP_DREG_CERT.
+#   - drep_dereg_sign) Sign a tx.raw with the $PAYMENT_KEY and $DREP_KEY (witness-count = 2).
 #   - vote_raw) Build raw tx from a vote.raw file (vote.raw is generated using govern.sh functions).
 #   - vote_sign) Sign a tx.raw vote transaction with the vote.raw and $PAYMENT_KEY (witness-count = 2).
 #   - build) Build a transaction from amount, destination address, witness count, and optional params.
@@ -282,6 +286,28 @@ tx_drep_reg_raw() {
 }
 
 tx_drep_reg_sign() {
+    tx_drep_sign
+}
+
+tx_drep_dereg_raw() {
+    _require_producer_node || return 1
+    _require_file "$DREP_DREG_CERT" || return 1
+    outputPath=$NETWORK_PATH/temp
+
+    $CNCLI conway transaction build \
+        $NETWORK_ARG \
+        --socket-path $NETWORK_SOCKET_PATH \
+        --tx-in $(cardano_cli_first_utxo "$(<$PAYMENT_ADDR)") \
+        --change-address $(<$PAYMENT_ADDR) \
+        --certificate-file $DREP_DREG_CERT \
+        --witness-override 2 \
+        --out-file $outputPath/tx.raw || _tx_fail 'Could not build DRep de-registration transaction' || return 1
+
+    print 'TX' "File output: ${outputPath}/tx.raw" $green
+    return 0
+}
+
+tx_drep_sign() {
     _require_cold_node || return 1
     outputPath=$NETWORK_PATH/temp
 
@@ -290,11 +316,15 @@ tx_drep_reg_sign() {
         --tx-body-file $outputPath/tx.raw \
         --signing-key-file $PAYMENT_KEY \
         --signing-key-file $DREP_KEY \
-        --out-file $outputPath/tx.signed
+        --out-file $outputPath/tx.signed || _tx_fail 'Could not sign DRep transaction' || return 1
 
     rm $outputPath/tx.raw
     print 'TX' "File output: ${outputPath}/tx.signed" $green
     return 0
+}
+
+tx_drep_dereg_sign() {
+    tx_drep_sign
 }
 
 tx_vote_raw() {
@@ -501,6 +531,8 @@ case $1 in
     pool_withdraw_raw) tx_pool_withdraw_raw ;;
     drep_reg_raw) tx_drep_reg_raw ;;
     drep_reg_sign) tx_drep_reg_sign ;;
+    drep_dereg_raw) tx_drep_dereg_raw ;;
+    drep_dereg_sign) tx_drep_dereg_sign ;;
     vote_raw) tx_vote_raw "${@:2}" ;;
     vote_sign) tx_vote_sign "${@:2}" ;;
     build) tx_build "${@:2}" ;;
