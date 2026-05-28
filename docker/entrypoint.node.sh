@@ -6,6 +6,11 @@ echo "[ENTRYPOINT] Copy env.docker > env"
 cp $NODE_HOME/env.docker $NODE_HOME/env
 source $NODE_HOME/env
 
+_node_version_ok() {
+    command -v "$CNNODE" >/dev/null 2>&1 \
+        && "$CNNODE" version 2>/dev/null | head -1 | grep -qF "$NODE_VERSION"
+}
+
 if ! command -v $CNNODE >/dev/null 2>&1; then
     echo "[ENTRYPOINT] Installing"
     $NODE_HOME/scripts/node.sh install
@@ -16,6 +21,17 @@ if ! command -v $CNNODE >/dev/null 2>&1; then
     elif [ -n "$MITHRIL_VERSION" ]; then
         echo "[ENTRYPOINT] Skipping mithril sync, network $NODE_NETWORK is not supported"
     fi
+elif ! _node_version_ok; then
+    echo "[ENTRYPOINT] Node binary is not $NODE_VERSION — installing binaries"
+    $NODE_HOME/scripts/node/install.sh dependencies
+    $NODE_HOME/scripts/node/install.sh binaries
+    if [ ! -f "$NETWORK_PATH/config.json" ]; then
+        $NODE_HOME/scripts/node/install.sh configs
+    fi
+elif [ ! -f "$NETWORK_PATH/config.json" ]; then
+    echo "[ENTRYPOINT] Binaries present but configs missing — installing configs for $NODE_NETWORK"
+    $NODE_HOME/scripts/node/install.sh dependencies
+    $NODE_HOME/scripts/node/install.sh configs
 else
     echo "[ENTRYPOINT] Skipping install"
 fi

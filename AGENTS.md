@@ -36,17 +36,17 @@ env (+ env.docker in Docker)
 |-----|---------|
 | [README.md](README.md) | Entry point, assumptions, links to all guides |
 | [docs/README.md](docs/README.md) | Full docs index |
-| [docs/cardano-node-installation.md](docs/cardano-node-installation.md) | Env table, install, firewall |
-| [docs/mithril-installation.md](docs/mithril-installation.md) | Mithril signer/relay |
-| [docs/cardano-dbsync-installation.md](docs/cardano-dbsync-installation.md) | Postgres + db-sync |
-| [docs/midnight-installation.md](docs/midnight-installation.md) | Partner-chain Docker (separate `midnight/` tree when present) |
-| [docs/docker-installation.md](docs/docker-installation.md) | Local Docker workflow |
-| [docs/registering-stake-pool.md](docs/registering-stake-pool.md) | Pool registration |
-| [docs/managing-stake-pool.md](docs/managing-stake-pool.md) | Ops, KES, governance, retirement |
-| [docs/registering-drep.md](docs/registering-drep.md) | DRep |
-| [docs/registering-constitutional-committee.md](docs/registering-constitutional-committee.md) | CC member |
-| [docs/blockfrost-icebreaker.md](docs/blockfrost-icebreaker.md) | Icebreaker on relay |
-| [docs/registering-midnight-validator.md](docs/registering-midnight-validator.md) | Midnight validator |
+| [docs/deployment/01-cardano-node-installation.md](docs/deployment/01-cardano-node-installation.md) | Env table, install, firewall |
+| [docs/deployment/02-mithril-installation.md](docs/deployment/02-mithril-installation.md) | Mithril signer/relay |
+| [docs/deployment/03-cardano-dbsync-installation.md](docs/deployment/03-cardano-dbsync-installation.md) | Postgres + db-sync |
+| [docs/deployment/04-midnight-installation.md](docs/deployment/04-midnight-installation.md) | Partner-chain Docker (separate `midnight/` tree when present) |
+| [docs/deployment/06-docker-installation.md](docs/deployment/06-docker-installation.md) | Local Docker workflow |
+| [docs/registration/01-registering-stake-pool.md](docs/registration/01-registering-stake-pool.md) | Pool registration |
+| [docs/registration/02-managing-stake-pool.md](docs/registration/02-managing-stake-pool.md) | Ops, KES, governance, retirement |
+| [docs/registration/03-registering-drep.md](docs/registration/03-registering-drep.md) | DRep |
+| [docs/registration/04-registering-constitutional-committee.md](docs/registration/04-registering-constitutional-committee.md) | CC member |
+| [docs/registration/05-blockfrost-icebreaker.md](docs/registration/05-blockfrost-icebreaker.md) | Icebreaker on relay |
+| [docs/registration/06-registering-midnight-validator.md](docs/registration/06-registering-midnight-validator.md) | Midnight validator |
 | [docs/TESTS.md](docs/TESTS.md) | `test.sh` suites and manifests |
 
 ## Running scripts
@@ -108,9 +108,9 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 
 | Task | Read first |
 |------|------------|
-| Install node | `docs/cardano-node-installation.md`, `scripts/node/install.sh` |
-| Query chain | `scripts/query.sh`, `docs/managing-stake-pool.md` (monitoring section) |
-| Pool register | `docs/registering-stake-pool.md`, `scripts/pool.sh`, `scripts/tx.sh` |
-| Governance | `docs/registering-drep.md`, `scripts/govern.sh` |
+| Install node | `docs/deployment/01-cardano-node-installation.md`, `scripts/node/install.sh` |
+| Query chain | `scripts/query.sh`, `docs/registration/02-managing-stake-pool.md` (monitoring section) |
+| Pool register | `docs/registration/01-registering-stake-pool.md`, `scripts/pool.sh`, `scripts/tx.sh` |
+| Governance | `docs/registration/03-registering-drep.md`, `scripts/govern.sh` |
 | Tests / CI | `docs/TESTS.md`, `scripts/test/lib.sh` |
-| Docker dev | `docs/docker-installation.md`, `docker/docker-compose.yaml` |
+| Docker dev | `docs/deployment/06-docker-installation.md`, `docker/docker-compose.yaml` |

@@ -18,7 +18,7 @@
     "QueryBatchSize": 100000,
     "SnapshotInterval": 4320
   },
-  "MinNodeVersion": "10.4.0",
+  "MinNodeVersion": "11.0.1",
   "PeerSharing": false,
   "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresMagic",
