@@ -158,6 +158,7 @@ pool_generate_pool_reg_cert() {
     # Format the relays
     local relayArg=''
     local relays=$(get_option --relay "$@")
+    echo $relays
     read -ra relayParts <<< "$relays"
     if [ "${#relayParts[@]}" -eq 2 ]; then
         IFS=':' read -r ip port <<< "${relays[0]}"
@@ -255,6 +256,16 @@ pool_new_kes_counter() {
         --counter-value $counterValue \
         --operational-certificate-issue-counter-file $NODE_COUNTER || _pool_fail 'Could not update KES counter' || return 1
     return 0
+}
+
+pool_new_kes_counter() {
+    exit_if_not_cold
+    exit_if_file_missing $NODE_VKEY
+    local counterValue="${1}"
+    $CNCLI conway node new-counter \
+        --cold-verification-key-file $NODE_VKEY \
+        --counter-value $counterValue \
+        --operational-certificate-issue-counter-file $NODE_COUNTER
 }
 
 pool_get_pool_id() {

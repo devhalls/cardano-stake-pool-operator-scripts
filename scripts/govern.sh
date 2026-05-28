@@ -197,6 +197,21 @@ govern_drep_state() {
     return $?
 }
 
+govern_drep_id() {
+    exit_if_not_producer
+    local format="${1:-"--output-bech32"}"
+    $CNCLI conway governance drep id \
+        --drep-verification-key-file $DREP_VKEY \
+        $format \
+        --out-file $DREP_ID
+    cat $DREP_ID
+}
+
+govern_drep_state() {
+    exit_if_cold
+    $CNCLI conway query drep-state --drep-key-hash $(govern_drep_id hex) $NETWORK_ARG --socket-path $NETWORK_SOCKET_PATH
+}
+
 govern_generate_drep_keys() {
     _require_cold_node || return 1
     _require_file_missing_or_confirm "$DREP_VKEY" "DRep keys already exist! 'yes' to overwrite, 'no' to cancel" || return 1
