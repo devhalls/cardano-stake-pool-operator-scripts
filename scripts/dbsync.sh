@@ -95,11 +95,14 @@ dbsync_download() {
         filename=$DOWNLOAD_RELEASE_FILENAME
         remove_path "$extract_dir"
         mkdir -p "$extract_dir"
-        tar -xvzf "downloads/$filename" -C "$extract_dir" || _dbsync_fail 'Could not extract db-sync archive' || return 1
-        sudo cp -a "$extract_dir/." $BIN_PATH/ || _dbsync_fail 'Could not install db-sync binaries' || return 1
-        chmod +x -R $BIN_PATH
-        remove_path downloads
-        $DB_SYNC_NAME --version
+        tar -xzf "downloads/$filename" -C "$extract_dir" || _dbsync_fail 'Could not extract db-sync archive' || return 1
+        if [ ! -f "$extract_dir/bin/$DB_SYNC_NAME" ]; then
+            _dbsync_fail "Release archive missing $extract_dir/bin/$DB_SYNC_NAME" || return 1
+        fi
+        sudo cp -a "$extract_dir/bin/." "$BIN_PATH/" || _dbsync_fail 'Could not install db-sync binaries' || return 1
+        sudo chmod +x "$BIN_PATH"/* 2>/dev/null || true
+        sudo rm -rf downloads
+        "$DB_SYNC" --version || _dbsync_fail 'Installed db-sync binary is not runnable' || return 1
         print 'INSTALL' "DBSync binaries moved to $BIN_PATH" $green
         return 0
     fi

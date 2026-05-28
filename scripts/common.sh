@@ -416,10 +416,10 @@ dbsync_release_filenames() {
 
     case "$os" in
         linux)
-            echo "cardano-db-sync-${version}-linux-${arch}.tar.gz"
             if [[ "$arch" == "amd64" ]]; then
                 echo "cardano-db-sync-${version}-linux.tar.gz"
             fi
+            echo "cardano-db-sync-${version}-linux-${arch}.tar.gz"
             ;;
         macos)
             echo "cardano-db-sync-${version}-macos-${arch}.tar.gz"
