@@ -4,38 +4,6 @@ Manage your Cardano nodes using easy to understand environment managemnt
 
 ---
 
-## Overview
-
-Scripts are executed via their relative path (likely to change to a single executable)
-
-```shell
-scripts/address.sh help
-scripts/dbync.sh help
-scripts/govern.sh help
-scripts/network.sh help
-scripts/node.sh help
-scripts/pool.sh help
-scripts/query.sh help
-scripts/tx.sh help
-```
-
----
-
-### Script notation
-
-- `( )` Parenthesis = mandatory parameters.
-- `[ ]` Square brackets = optional parameters.
-- `< >` Angle brackets = parameter types.
-- `|` Bar = Choice between several options.
-
-```
-Usage: query.sh (
-  tip [name <STRING>] |
-  params [name <STRING<'option1'|'option2'>>] |
-  config (name <STRING>) [key <STRING>] |
-)
-```
-
 ## Getting started
 
 We divide our workflow in two main branches; **deployment**, covering node dependencies, configs and installs, and
@@ -62,3 +30,33 @@ We divide our workflow in two main branches; **deployment**, covering node depen
 **Tests**
 
 1. [Integration and smoke tests](TESTS.md)
+
+---
+
+## Script notation
+
+Scripts are executed via their relative path (likely to change to a single executable)
+
+```shell
+scripts/address.sh help
+scripts/dbync.sh help
+scripts/govern.sh help
+scripts/network.sh help
+scripts/node.sh help
+scripts/pool.sh help
+scripts/query.sh help
+scripts/tx.sh help
+```
+
+- `( )` Parenthesis = mandatory parameters.
+- `[ ]` Square brackets = optional parameters.
+- `< >` Angle brackets = parameter types.
+- `|` Bar = Choice between several options.
+
+```
+Usage: query.sh (
+  tip [name <STRING>] |
+  params [name <STRING<'option1'|'option2'>>] |
+  config (name <STRING>) [key <STRING>] |
+)
+```
