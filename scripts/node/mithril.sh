@@ -237,7 +237,7 @@ METRICS_SERVER_PORT=$MITHRIL_METRICS_SERVER_PORT
 
 mithril_install_signer_service() {
     _require_producer_node || return 1
-    local dir="$(dirname "$0")/../../services"
+    local dir="$SERVICES_SOURCE"
     print 'INSTALL' "Creating mithril signer service: $MITHRIL_SERVICE"
     cp -p "$dir/mithril.service" "$dir/$MITHRIL_SERVICE.temp" || _mithril_fail 'Could not copy service template' || return 1
     sed -i "$dir/$MITHRIL_SERVICE.temp" \
@@ -281,7 +281,7 @@ mithril_install_squid() {
 mithril_configure_squid() {
     _require_relay_node || return 1
     local ipAddress=$1
-    local dir="$(dirname "$0")/../../services"
+    local dir="$SERVICES_SOURCE"
     if [[ ! $ipAddress ]]; then
         _mithril_fail 'Please supply an IP address' || return 1
     fi

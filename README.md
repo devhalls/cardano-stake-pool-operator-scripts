@@ -23,19 +23,22 @@ tree --filesfirst -L 3
 ├── LICENSE
 ├── README.md
 ├── docs
+│   ├── README.md
 │   ├── TESTS.md
-│   ├── cardano-node-installation.md
-│   ├── mithril-installation.md
-│   ├── cardano-dbsync-installation.md
-│   ├── midnight-installation.md
-│   ├── midnight-dbsync-installation.md
-│   ├── docker-installation.md
-│   ├── registering-stake-pool.md
-│   ├── managing-stake-pool.md
-│   ├── registering-drep.md
-│   ├── registering-constitutional-committee.md
-│   ├── blockfrost-icebreaker.md
-│   └── registering-midnight-validator.md
+│   ├── deployment
+│   │   ├── 01-cardano-node-installation.md
+│   │   ├── 02-mithril-installation.md
+│   │   ├── 03-cardano-dbsync-installation.md
+│   │   ├── 04-midnight-installation.md
+│   │   ├── 05-midnight-dbsync-installation.md
+│   │   └── 06-docker-installation.md
+│   └── registration
+│       ├── 01-registering-stake-pool.md
+│       ├── 02-managing-stake-pool.md
+│       ├── 03-registering-drep.md
+│       ├── 04-registering-constitutional-committee.md
+│       ├── 05-blockfrost-icebreaker.md
+│       └── 06-registering-midnight-validator.md
 ├── env.docker
 ├── env.example
 ├── docker
@@ -76,21 +79,24 @@ tree --filesfirst -L 3
 │       ├── install.sh
 │       ├── mithril.sh
 │       └── update.sh
-└── services
+└── configs
+    ├── node
+    │   └── <version>/<network>/…
     ├── schema
-        ├── migration-1-0000-20190730.sql
-        ├── ...
-        └── migration-4-0008-20240604.sql
-    ├── blockfrost-platform.service
-    ├── cardano-node.service
-    ├── cardano-db-sync.service
-    ├── grafana-mithril-dashboard.json
-    ├── grafana-node-dashboard.json
-    ├── mithril.service
-    ├── ngrok.service
-    ├── pgpass
-    ├── prometheus.yml
-    └── squid.service
+    │   ├── migration-1-0000-20190730.sql
+    │   ├── …
+    │   └── migration-4-0008-20240604.sql
+    └── services
+        ├── blockfrost-platform.service
+        ├── cardano-node.service
+        ├── cardano-db-sync.service
+        ├── grafana-mithril-dashboard.json
+        ├── grafana-node-dashboard.json
+        ├── mithril.service
+        ├── ngrok.service
+        ├── pgpass
+        ├── prometheus.yml
+        └── squid.service
 ```
 
 </details>
@@ -114,21 +120,21 @@ We divide our workflow in two main branches; **deployment**, covering node depen
 
 **Deployment**
 
-1. [Cardano Node installation](docs/cardano-node-installation.md)
-2. [Mithril Node installation](docs/mithril-installation.md)
-3. [Cardano DBSync installation](docs/cardano-dbsync-installation.md)
-4. [Midnight Node installation](docs/midnight-installation.md)
-5. [Midnight DBSync installation](docs/midnight-dbsync-installation.md)
-6. [Local Docker](docs/docker-installation.md)
+1. [Cardano Node installation](docs/deployment/01-cardano-node-installation.md)
+2. [Mithril Node installation](docs/deployment/02-mithril-installation.md)
+3. [Cardano DBSync installation](docs/deployment/03-cardano-dbsync-installation.md)
+4. [Midnight Node installation](docs/deployment/04-midnight-installation.md)
+5. [Midnight DBSync installation](docs/deployment/05-midnight-dbsync-installation.md)
+6. [Local Docker](docs/deployment/06-docker-installation.md)
 
-**Registrations**
+**Registration**
 
-1. [Registering a Stake Pool](docs/registering-stake-pool.md)
-2. [Managing a Stake Pool](docs/managing-stake-pool.md)
-3. [Registering a DRep](docs/registering-drep.md)
-4. [Registering a Constitutional Committee member](docs/registering-constitutional-committee.md)
-5. [BlockFrost Icebreaker](docs/blockfrost-icebreaker.md)
-6. [Registering a Midnight Validator](docs/registering-midnight-validator.md)
+1. [Registering a Stake Pool](docs/registration/01-registering-stake-pool.md)
+2. [Managing a Stake Pool](docs/registration/02-managing-stake-pool.md)
+3. [Registering a DRep](docs/registration/03-registering-drep.md)
+4. [Registering a Constitutional Committee member](docs/registration/04-registering-constitutional-committee.md)
+5. [BlockFrost Icebreaker](docs/registration/05-blockfrost-icebreaker.md)
+6. [Registering a Midnight Validator](docs/registration/06-registering-midnight-validator.md)
 
 **Documentation**
 

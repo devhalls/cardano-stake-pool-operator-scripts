@@ -95,11 +95,14 @@ dbsync_download() {
         filename=$DOWNLOAD_RELEASE_FILENAME
         remove_path "$extract_dir"
         mkdir -p "$extract_dir"
-        tar -xvzf "downloads/$filename" -C "$extract_dir" || _dbsync_fail 'Could not extract db-sync archive' || return 1
-        sudo cp -a "$extract_dir/." $BIN_PATH/ || _dbsync_fail 'Could not install db-sync binaries' || return 1
-        chmod +x -R $BIN_PATH
-        remove_path downloads
-        $DB_SYNC_NAME --version
+        tar -xzf "downloads/$filename" -C "$extract_dir" || _dbsync_fail 'Could not extract db-sync archive' || return 1
+        if [ ! -f "$extract_dir/bin/$DB_SYNC_NAME" ]; then
+            _dbsync_fail "Release archive missing $extract_dir/bin/$DB_SYNC_NAME" || return 1
+        fi
+        sudo cp -a "$extract_dir/bin/." "$BIN_PATH/" || _dbsync_fail 'Could not install db-sync binaries' || return 1
+        sudo chmod +x "$BIN_PATH"/* 2>/dev/null || true
+        sudo rm -rf downloads
+        "$DB_SYNC" --version || _dbsync_fail 'Installed db-sync binary is not runnable' || return 1
         print 'INSTALL' "DBSync binaries moved to $BIN_PATH" $green
         return 0
     fi
@@ -149,20 +152,20 @@ dbsync_update() {
 dbsync_install() {
     print 'INSTALL' "Creating directories at $DB_SYNC_PATH"
     mkdir -p $DB_SYNC_PATH $DB_SYNC_PATH/schema $DB_SYNC_PATH/ledger-state || _dbsync_fail 'Could not create db-sync directories' || return 1
-    cp -pr services/schema/. $DB_SYNC_PATH/schema || _dbsync_fail 'Could not copy db-sync schema' || return 1
-    cp -p services/pgpass services/pgpass.temp
-    sed -i services/pgpass.temp \
+    cp -pr "$SCHEMA_SOURCE/." "$DB_SYNC_PATH/schema" || _dbsync_fail 'Could not copy db-sync schema' || return 1
+    cp -p "$SERVICES_SOURCE/pgpass" "$SERVICES_SOURCE/pgpass.temp"
+    sed -i "$SERVICES_SOURCE/pgpass.temp" \
         -e "s|POSTGRES_DB|$POSTGRES_DB|g"
-    cp -p services/pgpass.temp $DB_SYNC_PATH/pgpass || _dbsync_fail 'Could not create pgpass file' || return 1
+    cp -p "$SERVICES_SOURCE/pgpass.temp" "$DB_SYNC_PATH/pgpass" || _dbsync_fail 'Could not create pgpass file' || return 1
 
     print 'INSTALL' 'Creating db-sync service'
-    cp -p services/cardano-db-sync.service services/$DB_SYNC_NAME.temp
-    sed -i services/$DB_SYNC_NAME.temp \
+    cp -p "$SERVICES_SOURCE/cardano-db-sync.service" "$SERVICES_SOURCE/$DB_SYNC_NAME.temp"
+    sed -i "$SERVICES_SOURCE/$DB_SYNC_NAME.temp" \
         -e "s|NODE_HOME|$NODE_HOME|g" \
         -e "s|NODE_USER|$NODE_USER|g" \
         -e "s|DB_SYNC_SERVICE|$DB_SYNC_SERVICE|g"
-    sudo cp -p services/$DB_SYNC_NAME.temp $SERVICE_PATH/$DB_SYNC_SERVICE || _dbsync_fail 'Could not install db-sync service' || return 1
-    rm services/$DB_SYNC_NAME.temp
+    sudo cp -p "$SERVICES_SOURCE/$DB_SYNC_NAME.temp" "$SERVICE_PATH/$DB_SYNC_SERVICE" || _dbsync_fail 'Could not install db-sync service' || return 1
+    rm "$SERVICES_SOURCE/$DB_SYNC_NAME.temp"
 
     sudo systemctl daemon-reload || _dbsync_fail 'Could not reload systemd' || return 1
     sudo systemctl enable $DB_SYNC_SERVICE || _dbsync_fail 'Could not enable db-sync service' || return 1

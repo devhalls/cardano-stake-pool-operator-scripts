@@ -21,7 +21,6 @@ services:
             - "./../configs:${NODE_HOME}/configs"
             - "./../docs:${NODE_HOME}/docs"
             - "./../scripts:${NODE_HOME}/scripts"
-            - "./../services:${NODE_HOME}/services"
             - "./../env.docker:${NODE_HOME}/env.docker"
             - "./entrypoint.node.sh:${NODE_HOME}/entrypoint.node.sh"
             - "./bin:${BIN_PATH}"
@@ -67,7 +66,7 @@ services:
         networks:
             - dapp_network
     db-sync:
-        image: ghcr.io/intersectmbo/cardano-db-sync:13.6.0.5
+        image: ghcr.io/intersectmbo/cardano-db-sync:13.7.0.5
         container_name: db-sync
         depends_on:
             - node

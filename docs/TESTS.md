@@ -1,10 +1,22 @@
 # Integration tests
 
-Script integration tests for the SPO operational toolkit. Each case runs the same `scripts/*.sh` entry points used in production, with per-test pass, fail, or skip reporting.
+[Full docs index](README.md) · **Integration and smoke tests** · [AI / agent guide](../AGENTS.md)
 
-[README](../README.md) · [Docs index](README.md) · [scripts/test.sh](../scripts/test.sh) · [Release manifests](../scripts/test/releases/)
+**Deployment**
+1. [Cardano Node installation](deployment/01-cardano-node-installation.md)
+2. [Mithril Node installation](deployment/02-mithril-installation.md)
+3. [Cardano DBSync installation](deployment/03-cardano-dbsync-installation.md)
+4. [Midnight Node installation](deployment/04-midnight-installation.md)
+5. [Midnight DBSync installation](deployment/05-midnight-dbsync-installation.md)
+6. [Local Docker](deployment/06-docker-installation.md)
 
-**Summary:** `smoke` validates env and services against versioned manifests. `integration` runs read-only chain queries when a socket is available. Use `--report` to refresh the generated results section at the bottom of this file.
+**Registration**
+1. [Registering a Stake Pool](registration/01-registering-stake-pool.md)
+2. [Managing a Stake Pool](registration/02-managing-stake-pool.md)
+3. [Registering a DRep](registration/03-registering-drep.md)
+4. [Registering a Constitutional Committee member](registration/04-registering-constitutional-committee.md)
+5. [BlockFrost Icebreaker](registration/05-blockfrost-icebreaker.md)
+6. [Registering a Midnight Validator](registration/06-registering-midnight-validator.md)
 
 ---
 
@@ -117,9 +129,11 @@ Definitive env contract — validated in three on-disk files and at runtime:
 | `PACKAGED` | Env service name must match the distro unit (`prometheus.service`, etc.) |
 | `SCHEMA_PIN` / `SCHEMA_HEAD` | Only when db-sync is installed (`$DB_SYNC` binary or `$DB_SYNC_PATH/schema` migrations present) |
 
-**Templates:** every `SERVICE` / `OPTIONAL_SERVICE` / `UNIT_STATIC` line must have a file under `services/` with valid systemd unit sections; substitution vars from the manifest must appear in the template.
+**Templates:** every `SERVICE` / `OPTIONAL_SERVICE` / `UNIT_STATIC` line must have a file under `configs/services/` with valid systemd unit sections; substitution vars from the manifest must appear in the template.
 
-**Docker vs local:** templates are read from `$REPO_ROOT/services` (mounted in Docker). Deployed-unit diffs are skipped in Docker / non-systemd hosts; template and schema checks still run.
+**Schema:** `SCHEMA_PIN` / `SCHEMA_HEAD` refer to migrations under `configs/schema/` (`$SCHEMA_SOURCE`).
+
+**Docker vs local:** templates and schema are read from `$SERVICES_SOURCE` and `$SCHEMA_SOURCE` (under `$NODE_HOME/configs/`, mounted in Docker). Deployed-unit diffs are skipped in Docker / non-systemd hosts; template and schema checks still run.
 
 ### Configs (`<version>.configs.manifest`)
 

@@ -92,6 +92,19 @@ configs_validate_apply_manifest() {
                     continue
                 fi
                 case "$rel_path" in
+                    peer-snapshot.json)
+                        if ! configs_validate_json_file "$full"; then
+                            errors=$((errors + 1))
+                        elif ! jq -e '.NetworkMagic and .Point.blockPointSlot and .Point.blockPointHash and (.bigLedgerPools | type == "array" and length > 0)' "$full" >/dev/null 2>&1; then
+                            echo "peer-snapshot must use LedgerBigPeerSnapshotV23 (NetworkMagic, Point, bigLedgerPools): $network/$rel_path"
+                            errors=$((errors + 1))
+                        elif jq -e '.version or .slotNo or .bigLedgerPeers' "$full" >/dev/null 2>&1; then
+                            echo "peer-snapshot must not use legacy version/slotNo/bigLedgerPeers format: $network/$rel_path"
+                            errors=$((errors + 1))
+                        else
+                            echo "ok: $network/$rel_path"
+                        fi
+                        ;;
                     *.json)
                         if ! configs_validate_json_file "$full"; then
                             errors=$((errors + 1))

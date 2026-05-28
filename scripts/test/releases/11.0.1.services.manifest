@@ -17,5 +17,6 @@ PACKAGED PROMETHEUS_SCRAPER_SERVICE prometheus.service
 PACKAGED PROMETHEUS_EXPORTER_SERVICE prometheus-node-exporter.service
 PACKAGED GRAFANA_SERVICE grafana-server.service
 
-SCHEMA_PIN DB_SYNC_VERSION 13.6.0.5
-SCHEMA_HEAD migration-4-0008-20240604.sql
+SCHEMA_PIN DB_SYNC_VERSION 13.7.0.5
+# HEAD includes migration-2-0048 (13.7.1.0 epoch fix); runs only when binary is >= 13.7.1.0
+SCHEMA_HEAD migration-2-0048-20260520.sql

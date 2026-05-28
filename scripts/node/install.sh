@@ -190,7 +190,7 @@ install_grafana() {
     sudo grafana-cli plugins install grafana-clock-panel || _install_fail 'Could not install grafana-clock-panel plugin' || return 1
     sudo grafana-cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
 
-    serviceDir="$(dirname "$0")/../../services"
+    serviceDir="$SERVICES_SOURCE"
     sudo cp -p "$serviceDir/prometheus.yml" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
 
     sudo sed -i "/# disable user signup \/ registration/{n;s/.*/allow_sign_up = false/}" "/etc/grafana/grafana.ini" || \
@@ -212,7 +212,7 @@ install_grafana() {
 
 install_service() {
     if platform_ctl; then
-        local dir=$(dirname "$0")/../../services
+        local dir="$SERVICES_SOURCE"
         print 'INSTALL' "Creating node service: $NETWORK_SERVICE"
         cp -p "$dir/cardano-node.service" "$dir/$NETWORK_SERVICE.temp" || _install_fail 'Could not copy service template' || return 1
         sed -i "$dir/$NETWORK_SERVICE.temp" \

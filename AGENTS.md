@@ -10,7 +10,8 @@ Bash toolkit for **Cardano Stake Pool Operators**: install and run nodes, option
 | `scripts/node/` | Build, download, install, update, mithril, icebreaker helpers |
 | `scripts/test/` | Smoke + integration test harness (`test.sh`); release manifests under `releases/` |
 | `configs/node/<version>/<network>/` | Pinned node config bundles (e.g. `11.0.1` × `mainnet` / `preview` / `preprod` / `sanchonet`) |
-| `services/` | Systemd unit templates + db-sync SQL schema migrations |
+| `configs/services/` | Systemd unit templates (`$SERVICES_SOURCE`) |
+| `configs/schema/` | cardano-db-sync SQL migrations (`$SCHEMA_SOURCE`) |
 | `docker/` | Local testnet stack (not for mainnet); `docker/script.sh` wraps `scripts/` in the container |
 | `docker/fixture.sh` | Destructive key/register flows for dev (not `test.sh fixture`) |
 | `env.example` / `env.docker` | Definitive env templates; runtime `env` is gitignored |
@@ -36,17 +37,17 @@ env (+ env.docker in Docker)
 |-----|---------|
 | [README.md](README.md) | Entry point, assumptions, links to all guides |
 | [docs/README.md](docs/README.md) | Full docs index |
-| [docs/cardano-node-installation.md](docs/cardano-node-installation.md) | Env table, install, firewall |
-| [docs/mithril-installation.md](docs/mithril-installation.md) | Mithril signer/relay |
-| [docs/cardano-dbsync-installation.md](docs/cardano-dbsync-installation.md) | Postgres + db-sync |
-| [docs/midnight-installation.md](docs/midnight-installation.md) | Partner-chain Docker (separate `midnight/` tree when present) |
-| [docs/docker-installation.md](docs/docker-installation.md) | Local Docker workflow |
-| [docs/registering-stake-pool.md](docs/registering-stake-pool.md) | Pool registration |
-| [docs/managing-stake-pool.md](docs/managing-stake-pool.md) | Ops, KES, governance, retirement |
-| [docs/registering-drep.md](docs/registering-drep.md) | DRep |
-| [docs/registering-constitutional-committee.md](docs/registering-constitutional-committee.md) | CC member |
-| [docs/blockfrost-icebreaker.md](docs/blockfrost-icebreaker.md) | Icebreaker on relay |
-| [docs/registering-midnight-validator.md](docs/registering-midnight-validator.md) | Midnight validator |
+| [docs/deployment/01-cardano-node-installation.md](docs/deployment/01-cardano-node-installation.md) | Env table, install, firewall |
+| [docs/deployment/02-mithril-installation.md](docs/deployment/02-mithril-installation.md) | Mithril signer/relay |
+| [docs/deployment/03-cardano-dbsync-installation.md](docs/deployment/03-cardano-dbsync-installation.md) | Postgres + db-sync |
+| [docs/deployment/04-midnight-installation.md](docs/deployment/04-midnight-installation.md) | Partner-chain Docker (separate `midnight/` tree when present) |
+| [docs/deployment/06-docker-installation.md](docs/deployment/06-docker-installation.md) | Local Docker workflow |
+| [docs/registration/01-registering-stake-pool.md](docs/registration/01-registering-stake-pool.md) | Pool registration |
+| [docs/registration/02-managing-stake-pool.md](docs/registration/02-managing-stake-pool.md) | Ops, KES, governance, retirement |
+| [docs/registration/03-registering-drep.md](docs/registration/03-registering-drep.md) | DRep |
+| [docs/registration/04-registering-constitutional-committee.md](docs/registration/04-registering-constitutional-committee.md) | CC member |
+| [docs/registration/05-blockfrost-icebreaker.md](docs/registration/05-blockfrost-icebreaker.md) | Icebreaker on relay |
+| [docs/registration/06-registering-midnight-validator.md](docs/registration/06-registering-midnight-validator.md) | Midnight validator |
 | [docs/TESTS.md](docs/TESTS.md) | `test.sh` suites and manifests |
 
 ## Running scripts
@@ -84,7 +85,7 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 1. **Bash style:** Match existing scripts — `source common.sh`, `print` for messages, `_foo_fail` helpers, `case $1 in` dispatch, header `Usage:` comment block.
 2. **Env changes:** Update `env.example`, `env.docker`, and `scripts/test/releases/<version>.manifest` (and `.docker.manifest` if Docker-only pins). Run smoke.
 3. **New config file per network:** Add to `configs/node/<version>/<network>/` and `*.configs.manifest`.
-4. **New systemd template:** Add to `services/` and `*.services.manifest` with correct `SERVICE` / substitution vars.
+4. **New systemd template:** Add to `configs/services/` and `*.services.manifest` with correct `SERVICE` / substitution vars.
 5. **Version bump:** Copy all release manifests; update pins, schema head, build flake pins; see `scripts/test/releases/README.md`.
 6. **Minimal diffs:** No drive-by refactors; this repo favors explicit shell over heavy abstraction.
 7. **Secrets:** Never commit `env`, keys under `$NETWORK_PATH/keys`, or API tokens.
@@ -108,9 +109,9 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 
 | Task | Read first |
 |------|------------|
-| Install node | `docs/cardano-node-installation.md`, `scripts/node/install.sh` |
-| Query chain | `scripts/query.sh`, `docs/managing-stake-pool.md` (monitoring section) |
-| Pool register | `docs/registering-stake-pool.md`, `scripts/pool.sh`, `scripts/tx.sh` |
-| Governance | `docs/registering-drep.md`, `scripts/govern.sh` |
+| Install node | `docs/deployment/01-cardano-node-installation.md`, `scripts/node/install.sh` |
+| Query chain | `scripts/query.sh`, `docs/registration/02-managing-stake-pool.md` (monitoring section) |
+| Pool register | `docs/registration/01-registering-stake-pool.md`, `scripts/pool.sh`, `scripts/tx.sh` |
+| Governance | `docs/registration/03-registering-drep.md`, `scripts/govern.sh` |
 | Tests / CI | `docs/TESTS.md`, `scripts/test/lib.sh` |
-| Docker dev | `docs/docker-installation.md`, `docker/docker-compose.yaml` |
+| Docker dev | `docs/deployment/06-docker-installation.md`, `docker/docker-compose.yaml` |
