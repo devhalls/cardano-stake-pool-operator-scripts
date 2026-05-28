@@ -2,8 +2,8 @@
 
 Script integration tests for the SPO operational toolkit. Each case runs the same `scripts/*.sh` entry points used in production, with per-test pass, fail, or skip reporting.
 
-[scripts/test.sh](../scripts/test.sh) 
-[Release manifests](../scripts/test/releases/)
+* [scripts/test.sh](../scripts/test.sh)
+* [Release manifests](../scripts/test/releases/)
 
 **Summary:** `smoke` validates env and services against versioned manifests. `integration` runs read-only chain queries when a socket is available. Use `--report` to refresh the generated results section at the bottom of this file.
 
@@ -11,11 +11,10 @@ Script integration tests for the SPO operational toolkit. Each case runs the sam
 
 ## Prerequisites
 
-### Docker (recommended for integration)
+### Docker
 
 1. Start the stack: `./docker/run.sh up -d --build`
 2. Wait until the node is synced and the socket exists at `/ipc/node.socket` inside the container.
-3. Optional wallet integration tests: create keys with [docker/fixture.sh](../docker/fixture.sh) and fund `payment.addr` via the [testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet).
 
 ### Local
 
@@ -26,7 +25,7 @@ Script integration tests for the SPO operational toolkit. Each case runs the sam
 
 ## Running tests
 
-### Docker (same pattern as other scripts)
+### Docker
 
 ```shell
 # From repository root
@@ -39,20 +38,6 @@ Script integration tests for the SPO operational toolkit. Each case runs the sam
 ./docker/script.sh test.sh smoke --report
 ./docker/script.sh test.sh integration --report
 ./docker/script.sh test.sh report
-```
-
-**Updating docs from Docker:** `test.sh` writes to `$NODE_HOME/docs/TESTS.md`, which is this file on the host via the `docs/` bind mount. If you see `Docs path not available`, recreate the node container so the volume is applied:
-
-```shell
-./docker/run.sh up -d
-```
-
-### Inside the container
-
-```shell
-docker exec -it node bash
-$NODE_HOME/scripts/test.sh smoke
-$NODE_HOME/scripts/test.sh smoke --report
 ```
 
 ### Local / sos
@@ -193,11 +178,11 @@ Updated automatically by `test.sh --report` or `test.sh report`. Do not edit the
 <!-- TEST_RESULTS_START -->
 ## Last run
 
-- **Time:** 2026-05-28 00:30:49 UTC
+- **Time:** 2026-05-28 00:53:34 UTC
 - **Git:** n/a
 - **Environment:** docker | network=sanchonet | type=relay
 - **Suite:** all
-- **Summary:** passed=27 failed=0 skipped=6
+- **Summary:** passed=28 failed=0 skipped=6
 
 ### Results
 
@@ -206,6 +191,7 @@ PASS | smoke_env_files
 PASS | smoke_env_runtime
 PASS | smoke_services_release
 PASS | smoke_configs_release
+PASS | smoke_build_release
 PASS | smoke_cardano_cli
 PASS | smoke_help_address
 PASS | smoke_help_query
