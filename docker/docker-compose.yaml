@@ -16,13 +16,16 @@ services:
         networks:
             - dapp_network
         volumes:
+            - "./node:${NODE_HOME}"
             - "./../metadata:${NODE_HOME}/metadata"
+            - "./../configs:${NODE_HOME}/configs"
+            - "./../docs:${NODE_HOME}/docs"
             - "./../scripts:${NODE_HOME}/scripts"
             - "./../services:${NODE_HOME}/services"
             - "./../env.docker:${NODE_HOME}/env.docker"
             - "./entrypoint.node.sh:${NODE_HOME}/entrypoint.node.sh"
             - "./bin:${BIN_PATH}"
-            - "./node:${NODE_HOME}"
+            - cardano_ipc:/ipc
         entrypoint: [ "/bin/bash", "-c", "${NODE_HOME}/entrypoint.node.sh" ]
     prometheus:
         image: prom/prometheus:latest
@@ -79,9 +82,10 @@ services:
         volumes:
             - "./db-sync:/var/lib/cexplorer"
             - "./node:/node"
+            - cardano_ipc:/ipc
         command: [
             "--config /node/cardano-node/db-sync-config.json",
-            "--socket-path /node/cardano-node/db/socket",
+            "--socket-path /ipc/node.socket",
         ]
         networks:
             - dapp_network
@@ -91,3 +95,4 @@ networks:
 
 volumes:
     grafana_data:
+    cardano_ipc:

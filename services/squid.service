@@ -1,4 +1,4 @@
-Unit]
+[Unit]
 Description=Squid service
 StartLimitIntervalSec=0
 

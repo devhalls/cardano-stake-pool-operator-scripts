@@ -3,7 +3,10 @@
 # Define global variables
 
 source_from="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$source_from/.." && pwd)"
 source "$source_from/../env"
+
+CONFIG_SOURCE="$REPO_ROOT/configs/node/$NODE_VERSION/$NODE_NETWORK"
 
 NETWORK_ARG=
 case $NODE_NETWORK in
@@ -21,11 +24,9 @@ esac
 
 CONFIG_DOWNLOADS=(
     "config.json"
-    "config-bp.json"
     "db-sync-config.json"
     "submit-api-config.json"
     "topology.json"
-    "topology-genesis-mode.json"
     "peer-snapshot.json"
     "byron-genesis.json"
     "shelley-genesis.json"
@@ -33,12 +34,17 @@ CONFIG_DOWNLOADS=(
     "conway-genesis.json"
     "guardrails-script.plutus"
 )
-if [[ "$NODE_NETWORK" == "sanchonet" ]]; then
-    CONFIG_DOWNLOADS+=(
-        "topology-non-bootstrap-peers.json"
-        "checkpoints.json"
-    )
-fi
+case $NODE_NETWORK in
+    "mainnet")
+        CONFIG_DOWNLOADS+=("checkpoints.json" "topology-non-bootstrap-peers.json")
+        ;;
+    "preview")
+        CONFIG_DOWNLOADS+=("checkpoints.json")
+        ;;
+    "sanchonet")
+        CONFIG_DOWNLOADS+=("dijkstra-genesis.json" "config-bp.json")
+        ;;
+esac
 
 GUILD_SCRIPT_DOWNLOADS=(
     "gLiveView.sh"
@@ -72,21 +78,6 @@ GOV_ACTION_TYPES=(
     "treasury_withdrawal"
     "info"
 )
-
-# Overrides for sancho
-
-if [ "$NODE_NETWORK" == "sanchonet" ]; then
-    CONFIG_REMOTE="https://raw.githubusercontent.com/Hornan7/SanchoNet-Tutorials/refs/heads/main/genesis/"
-    CONFIG_DOWNLOADS=(
-        "config.json"
-        "topology.json"
-        "byron-genesis.json"
-        "shelley-genesis.json"
-        "alonzo-genesis.json"
-        "conway-genesis.json"
-        "guardrails-script.plutus"
-    )
-fi
 
 # Define global colours
 
@@ -238,11 +229,234 @@ platform() {
     fi
 }
 
-platform_arm() {
+platform_arch() {
     ARCH=$(uname -m)
-    if [[ "$ARCH" == "arm"* || "$ARCH" == "aarch64" ]]; then
+    case "$ARCH" in
+        x86_64 | amd64) echo "amd64" ;;
+        arm64 | aarch64 | arm*) echo "arm64" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+platform_arm() {
+    if [[ "$(platform_arch)" == "arm64" ]]; then
         echo "arm"
     fi
+}
+
+version_ge() {
+    [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -1)" == "$2" ]]
+}
+
+# Cardano CLI output helpers (plain-text and JSON formats vary across CLI versions)
+
+cardano_cli_version() {
+    local binary="${1:-$CNCLI}"
+    $binary --version 2>/dev/null | awk '{print $2}'
+}
+
+cardano_node_version() {
+    local binary="${1:-$CNNODE}"
+    $binary --version 2>/dev/null | awk '{print $2}'
+}
+
+parse_cardano_cli_min_fee() {
+    local output="$1"
+    if echo "$output" | jq -e 'type == "object"' >/dev/null 2>&1; then
+        echo "$output" | jq -r '.fee // .'
+    else
+        echo "$output" | tr -d '\n\r' | awk '{print $1}'
+    fi
+}
+
+cardano_cli_first_utxo() {
+    local address="$1"
+    local utxo_json
+    utxo_json=$($CNCLI conway query utxo --address "$address" $NETWORK_ARG \
+        --socket-path "$NETWORK_SOCKET_PATH" --output-json 2>/dev/null) || return 1
+    echo "$utxo_json" | jq -r 'if type == "object" then (keys[0] // empty) else empty end'
+}
+
+cardano_cli_query_utxo_text() {
+    local address="$1"
+    local output_file="$2"
+    $CNCLI conway query utxo --output-text $NETWORK_ARG \
+        --socket-path "$NETWORK_SOCKET_PATH" \
+        --address "$address" >"$output_file"
+}
+
+cardano_cli_utxo_text_balances() {
+    local utxo_file="$1"
+    local balance_file="$2"
+    tail -n +3 "$utxo_file" | sort -k3 -nr >"$balance_file"
+}
+
+cardano_cli_utxo_text_field() {
+    local line="$1"
+    local field="$2"
+    case "$field" in
+        txHash) awk '{ print $1 }' <<<"$line" ;;
+        txIx) awk '{ print $2 }' <<<"$line" ;;
+        lovelace) awk '{ print $3 }' <<<"$line" ;;
+        datumType) awk '{ print $6 }' <<<"$line" ;;
+    esac
+}
+
+cardano_cli_utxo_line_spendable() {
+    [[ "$(cardano_cli_utxo_text_field "$1" datumType)" == 'TxOutDatumNone' ]]
+}
+
+require_cardano_node_arm64_version() {
+    if [[ "$(platform_arch)" == "arm64" ]] && ! version_ge "$NODE_VERSION" "10.6.2"; then
+        print 'ERROR' "Node version $NODE_VERSION has no arm64 release. Set NODE_VERSION to 10.6.2 or later." $red
+        exit 1
+    fi
+}
+
+require_dbsync_arm64_support() {
+    if [[ "$(platform)" == "linux" && "$(platform_arch)" == "arm64" ]]; then
+        print 'ERROR' "cardano-db-sync does not publish linux-arm64 release binaries from IntersectMBO." $red
+        exit 1
+    fi
+}
+
+# cardano-node source build: lib versions from node tag flake.lock → iohk-nix flake.lock
+cardano_build_iohk_nix_rev() {
+    local node_ver="${1:-$NODE_VERSION}"
+    curl -sf "https://raw.githubusercontent.com/IntersectMBO/cardano-node/${node_ver}/flake.lock" \
+        | jq -r '.nodes.iohkNix.locked.rev'
+}
+
+cardano_build_lib_versions_from_node() {
+    local node_ver="${1:-$NODE_VERSION}"
+    local iohk_flake
+
+    IOHKNIX_VERSION="$(cardano_build_iohk_nix_rev "$node_ver")" || return 1
+    if [ -z "$IOHKNIX_VERSION" ] || [ "$IOHKNIX_VERSION" = "null" ]; then
+        return 1
+    fi
+
+    iohk_flake="$(curl -sf "https://raw.githubusercontent.com/input-output-hk/iohk-nix/${IOHKNIX_VERSION}/flake.lock")" || return 1
+    SODIUM_VERSION="$(echo "$iohk_flake" | jq -r '.nodes.sodium.original.rev')"
+    SECP256K1_VERSION="$(echo "$iohk_flake" | jq -r '.nodes.secp256k1.original.ref')"
+    BLST_VERSION="$(echo "$iohk_flake" | jq -r '.nodes.blst.original.ref')"
+
+    if [ -z "$SODIUM_VERSION" ] || [ "$SODIUM_VERSION" = "null" ]; then
+        return 1
+    fi
+    if [ -z "$SECP256K1_VERSION" ] || [ "$SECP256K1_VERSION" = "null" ]; then
+        return 1
+    fi
+    if [ -z "$BLST_VERSION" ] || [ "$BLST_VERSION" = "null" ]; then
+        return 1
+    fi
+    return 0
+}
+
+cardano_node_release_filenames() {
+    local version="$NODE_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+
+    case "$os" in
+        windows)
+            echo "cardano-node-${version}-win-amd64.zip"
+            echo "cardano-node-${version}-win64.zip"
+            ;;
+        macos)
+            echo "cardano-node-${version}-macos-${arch}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "cardano-node-${version}-macos.tar.gz"
+            fi
+            ;;
+        linux)
+            echo "cardano-node-${version}-linux-${arch}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "cardano-node-${version}-linux.tar.gz"
+            fi
+            ;;
+        *)
+            print 'ERROR' "Unsupported platform: $os" $red
+            return 1
+            ;;
+    esac
+}
+
+mithril_release_filenames() {
+    local version="$MITHRIL_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+    local suffix="x64"
+    if [[ "$arch" == "arm64" ]]; then
+        suffix="arm64"
+    fi
+
+    case "$os" in
+        windows) echo "mithril-${version}-windows-x64.tar.gz" ;;
+        macos)
+            echo "mithril-${version}-macos-${suffix}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "mithril-${version}-macos-x64.tar.gz"
+            fi
+            ;;
+        linux) echo "mithril-${version}-linux-${suffix}.tar.gz" ;;
+        *)
+            print 'ERROR' "Unsupported platform: $os" $red
+            return 1
+            ;;
+    esac
+}
+
+dbsync_release_filenames() {
+    local version="$DB_SYNC_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+
+    case "$os" in
+        linux)
+            echo "cardano-db-sync-${version}-linux-${arch}.tar.gz"
+            if [[ "$arch" == "amd64" ]]; then
+                echo "cardano-db-sync-${version}-linux.tar.gz"
+            fi
+            ;;
+        macos)
+            echo "cardano-db-sync-${version}-macos-${arch}.tar.gz"
+            echo "cardano-db-sync-${version}-macos.tar.gz"
+            ;;
+        windows)
+            print 'ERROR' "cardano-db-sync windows binaries are not published by IntersectMBO" $red
+            return 1
+            ;;
+        *)
+            print 'ERROR' "Unsupported platform: $os" $red
+            return 1
+            ;;
+    esac
+}
+
+remove_path() {
+    [ $# -gt 0 ] || return 0
+    command rm -rf "$@"
+}
+
+download_release_file() {
+    local remote="$1"
+    shift
+    local filename url
+
+    DOWNLOAD_RELEASE_FILENAME=
+    mkdir -p downloads
+    for filename in "$@"; do
+        url="$remote/$filename"
+        print 'DOWNLOAD' "Trying $url" >&2
+        wget -O "downloads/$filename" "$url"
+        if [ $? -eq 0 ]; then
+            DOWNLOAD_RELEASE_FILENAME="$filename"
+            return 0
+        fi
+        remove_path "downloads/$filename"
+    done
+    return 1
 }
 
 platform_ctl() {
@@ -300,30 +514,51 @@ exit_if_empty() {
     fi
 }
 
+# Guard predicates return 0 when the restriction applies.
+# Prefer these with script-local _fail helpers during script refactors.
+
+is_cold_device() {
+    [[ $NODE_TYPE == 'cold' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+is_not_cold_device() {
+    [[ $NODE_TYPE != 'cold' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+is_not_producer_device() {
+    [[ $NODE_TYPE != 'producer' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+is_not_relay_device() {
+    [[ $NODE_TYPE != 'relay' && $NODE_NETWORK == 'mainnet' ]]
+}
+
+# Guard exits (legacy - prefer predicates with script-local fail helpers)
+
 exit_if_cold() {
-    if [[ $NODE_TYPE == 'cold' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can not be run on a cold device" $red
+    if is_cold_device; then
+        print 'ERROR' 'This command can not be run on a cold device' $red
         exit 1
     fi
 }
 
 exit_if_not_cold() {
-    if [[ $NODE_TYPE != 'cold' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can only be run on a cold device" $red
+    if is_not_cold_device; then
+        print 'ERROR' 'This command can only be run on a cold device' $red
         exit 1
     fi
 }
 
 exit_if_not_producer() {
-    if [[ $NODE_TYPE != 'producer' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can only be run on a producer device" $red
+    if is_not_producer_device; then
+        print 'ERROR' 'This command can only be run on a producer device' $red
         exit 1
     fi
 }
 
 exit_if_not_relay() {
-    if [[ $NODE_TYPE != 'relay' && $NODE_NETWORK == 'mainnet' ]]; then
-        print "ERROR" "this command can only be run on a relay device" $red
+    if is_not_relay_device; then
+        print 'ERROR' 'This command can only be run on a relay device' $red
         exit 1
     fi
 }

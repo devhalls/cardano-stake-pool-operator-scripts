@@ -85,10 +85,11 @@ drep_register() {
 }
 
 drep_delegate() {
+    source "$(dirname "$0")/../env.docker"
     drepId=$(./docker/script.sh govern.sh drep_id)
     ./docker/script.sh address.sh generate_stake_vote_cert drep $drepId
-    ./docker/script.sh tx.sh build 0 2 --certificate-file "/home/ubuntu/Cardano/cardano-node/keys/vote-deleg.cert"
-    ./docker/script.sh tx.sh sign --signing-key-file "/home/ubuntu/Cardano/cardano-node/keys/payment.skey" --signing-key-file "/home/ubuntu/Cardano/cardano-node/keys/stake.skey"
+    ./docker/script.sh tx.sh build 0 2 --certificate-file "$DELE_VOTE_CERT"
+    ./docker/script.sh tx.sh sign --signing-key-file "$PAYMENT_KEY" --signing-key-file "$STAKE_KEY"
     ./docker/script.sh tx.sh submit
 }
 

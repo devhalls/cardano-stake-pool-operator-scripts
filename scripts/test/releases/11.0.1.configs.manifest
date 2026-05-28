@@ -1,0 +1,55 @@
+# Cardano node config bundle — release 11.0.1
+# NETWORK <name> then FILE <path> lines (under configs/node/<version>/<network>/)
+
+NETWORK mainnet
+FILE config.json
+FILE db-sync-config.json
+FILE submit-api-config.json
+FILE topology.json
+FILE peer-snapshot.json
+FILE byron-genesis.json
+FILE shelley-genesis.json
+FILE alonzo-genesis.json
+FILE conway-genesis.json
+FILE guardrails-script.plutus
+FILE checkpoints.json
+FILE topology-non-bootstrap-peers.json
+
+NETWORK preprod
+FILE config.json
+FILE db-sync-config.json
+FILE submit-api-config.json
+FILE topology.json
+FILE peer-snapshot.json
+FILE byron-genesis.json
+FILE shelley-genesis.json
+FILE alonzo-genesis.json
+FILE conway-genesis.json
+FILE guardrails-script.plutus
+
+NETWORK preview
+FILE config.json
+FILE db-sync-config.json
+FILE submit-api-config.json
+FILE topology.json
+FILE peer-snapshot.json
+FILE byron-genesis.json
+FILE shelley-genesis.json
+FILE alonzo-genesis.json
+FILE conway-genesis.json
+FILE guardrails-script.plutus
+FILE checkpoints.json
+
+NETWORK sanchonet
+FILE config.json
+FILE config-bp.json
+FILE db-sync-config.json
+FILE submit-api-config.json
+FILE topology.json
+FILE peer-snapshot.json
+FILE byron-genesis.json
+FILE shelley-genesis.json
+FILE alonzo-genesis.json
+FILE conway-genesis.json
+FILE guardrails-script.plutus
+FILE dijkstra-genesis.json

@@ -1,0 +1,139 @@
+services:
+  chain-indexer:
+    container_name: midnight-indexer-chain
+    restart: "no"
+    depends_on:
+      indexer-postgres:
+        condition: "service_healthy"
+      indexer-nats:
+        condition: "service_started"
+    image: "midnightntwrk/chain-indexer:${INDEXER_TAG}"
+    environment:
+      RUST_LOG: "chain_indexer=debug,indexer_common=debug,fastrace_opentelemetry=off,info"
+      APP__APPLICATION__NETWORK_ID: $APP__APPLICATION__NETWORK_ID
+      APP__INFRA__NODE__URL: $APP__INFRA__NODE__URL
+      APP__INFRA__STORAGE__HOST: $APP__INFRA__STORAGE__HOST
+      APP__INFRA__STORAGE__PASSWORD: $APP__INFRA__STORAGE__PASSWORD
+      APP__INFRA__PUB_SUB__URL: $APP__INFRA__PUB_SUB__URL
+      APP__INFRA__PUB_SUB__PASSWORD: $APP__INFRA__PUB_SUB__PASSWORD
+      APP__INFRA__ZSWAP_STATE_STORAGE__PASSWORD: $APP__INFRA__ZSWAP_STATE_STORAGE__PASSWORD
+      APP__INFRA__ZSWAP_STATE_STORAGE__URL: $APP__INFRA__ZSWAP_STATE_STORAGE__URL
+      APP__INFRA__LEDGER_STATE_STORAGE__PASSWORD: $APP__INFRA__STORAGE__PASSWORD
+      APP__INFRA__LEDGER_STATE_STORAGE__URL: $APP__INFRA__LEDGER_STATE_STORAGE__URL
+    healthcheck:
+      test: ["CMD-SHELL", "cat /var/run/chain-indexer/running"]
+      start_interval: "5s"
+      start_period: "30s"
+      interval: "5s"
+      timeout: "2s"
+      retries: 2
+  wallet-indexer:
+    container_name: midnight-indexer-wallet
+    restart: "no"
+    depends_on:
+      indexer-postgres:
+        condition: "service_healthy"
+      indexer-nats:
+        condition: "service_started"
+    image: "midnightntwrk/wallet-indexer:${INDEXER_TAG}"
+    environment:
+      RUST_LOG: "wallet_indexer=debug,indexer_common=debug,fastrace_opentelemetry=off,info"
+      APP__APPLICATION__NETWORK_ID: $APP__APPLICATION__NETWORK_ID
+      APP__INFRA__SECRET: $APP__INFRA__SECRET
+      APP__INFRA__STORAGE__HOST: $APP__INFRA__STORAGE__HOST
+      APP__INFRA__STORAGE__PASSWORD: $APP__INFRA__STORAGE__PASSWORD
+      APP__INFRA__PUB_SUB__URL: $APP__INFRA__PUB_SUB__URL
+      APP__INFRA__PUB_SUB__PASSWORD: $APP__INFRA__PUB_SUB__PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "cat /var/run/wallet-indexer/running"]
+      start_interval: "5s"
+      start_period: "30s"
+      interval: "5s"
+      timeout: "2s"
+      retries: 2
+  indexer-api:
+    container_name: midnight-indexer-api
+    restart: "no"
+    depends_on:
+      indexer-postgres:
+        condition: "service_healthy"
+      indexer-nats:
+        condition: "service_started"
+    image: "midnightntwrk/indexer-api:${INDEXER_TAG}"
+    ports:
+      - "8088:8088"
+    environment:
+      RUST_LOG: "indexer_api=debug,indexer_common=debug,fastrace_opentelemetry=off,info"
+      APP__APPLICATION__NETWORK_ID: $APP__APPLICATION__NETWORK_ID
+      APP__INFRA__SECRET: $APP__INFRA__SECRET
+      APP__INFRA__STORAGE__HOST: $APP__INFRA__STORAGE__HOST
+      APP__INFRA__STORAGE__PASSWORD: $APP__INFRA__STORAGE__PASSWORD
+      APP__INFRA__PUB_SUB__URL: $APP__INFRA__PUB_SUB__URL
+      APP__INFRA__PUB_SUB__PASSWORD: $APP__INFRA__PUB_SUB__PASSWORD
+      APP__INFRA__ZSWAP_STATE_STORAGE__PASSWORD: $APP__INFRA__ZSWAP_STATE_STORAGE__PASSWORD
+      APP__INFRA__ZSWAP_STATE_STORAGE__URL: $APP__INFRA__ZSWAP_STATE_STORAGE__URL
+    healthcheck:
+      test: ["CMD-SHELL", "cat /var/run/indexer-api/running"]
+      start_interval: "5s"
+      start_period: "30s"
+      interval: "5s"
+      timeout: "2s"
+      retries: 2
+  indexer-postgres:
+    container_name: midnight-indexer-postgres
+    image: "postgres:17.1-alpine"
+    restart: "always"
+    ports:
+      - "${INDEXER_POSTGRES_PORT_FORWARD}:${INDEXER_POSTGRES_PORT}"
+    volumes:
+      - "./target/data/postgres:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_USER: $APP__INFRA__STORAGE__USER
+      POSTGRES_DB: $APP__INFRA__STORAGE__DB
+      POSTGRES_PASSWORD: $APP__INFRA__STORAGE__PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indexer"]
+      interval: "5s"
+      timeout: "2s"
+      retries: 2
+    security_opt:
+      - no-new-privileges:true
+  indexer-nats:
+    container_name: midnight-indexer-nats
+    image: "nats:2.11.1"
+    restart: "always"
+    command: ["--user", "indexer", "--pass", $APP__INFRA__PUB_SUB__PASSWORD, "-js"]
+    ports:
+      - "${INDEXER_NATS_PORT_FORWARD}:${INDEXER_NATS_PORT}"
+    volumes:
+      - "./target/data/nats:/tmp/nats"
+    security_opt:
+      - no-new-privileges:true
+  indexer-node:
+    container_name: midnight-indexer-node
+    image: "midnightnetwork/midnight-node:${NODE_TAG}"
+    restart: "always"
+    ports:
+      - "${INDEXER_NODE_PORT_FORWARD}:${INDEXER_NODE_PORT}"
+    volumes:
+      - "./target/data/node:/node"
+    environment:
+      CFG_PRESET: "testnet-02"
+      BOOTNODES: $BOOTNODES
+      DB_SYNC_POSTGRES_CONNECTION_STRING: $DB_SYNC_POSTGRES_CONNECTION_STRING
+    command:
+      - "--pruning"
+      - "archive"
+      - "--unsafe-rpc-external"
+      - "--rpc-methods=Unsafe"
+      - "--rpc-cors"
+      - "all"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+        - default
+        - midnight-shared
+
+networks:
+    midnight-shared:
+        external: true
