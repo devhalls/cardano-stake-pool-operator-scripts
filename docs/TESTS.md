@@ -2,8 +2,7 @@
 
 Script integration tests for the SPO operational toolkit. Each case runs the same `scripts/*.sh` entry points used in production, with per-test pass, fail, or skip reporting.
 
-* [scripts/test.sh](../scripts/test.sh)
-* [Release manifests](../scripts/test/releases/)
+[README](../README.md) · [Docs index](README.md) · [scripts/test.sh](../scripts/test.sh) · [Release manifests](../scripts/test/releases/)
 
 **Summary:** `smoke` validates env and services against versioned manifests. `integration` runs read-only chain queries when a socket is available. Use `--report` to refresh the generated results section at the bottom of this file.
 
