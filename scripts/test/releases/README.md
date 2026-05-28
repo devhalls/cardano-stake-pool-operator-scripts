@@ -31,4 +31,4 @@ Each repo release (`NODE_VERSION`, e.g. `11.0.1`) is described by manifest files
 
 ## Schema head
 
-`SCHEMA_HEAD` must be the latest `migration-*.sql` under [`services/schema/`](../../services/schema/) shipped for the pinned `DB_SYNC_VERSION`. Update it when db-sync schema migrations are added for a new db-sync release.
+`SCHEMA_HEAD` must be the latest `migration-*.sql` under [`configs/schema/`](../../../configs/schema/) shipped for the pinned `DB_SYNC_VERSION`. Update it when db-sync schema migrations are added for a new db-sync release.

@@ -79,21 +79,24 @@ tree --filesfirst -L 3
 │       ├── install.sh
 │       ├── mithril.sh
 │       └── update.sh
-└── services
+└── configs
+    ├── node
+    │   └── <version>/<network>/…
     ├── schema
-        ├── migration-1-0000-20190730.sql
-        ├── ...
-        └── migration-4-0008-20240604.sql
-    ├── blockfrost-platform.service
-    ├── cardano-node.service
-    ├── cardano-db-sync.service
-    ├── grafana-mithril-dashboard.json
-    ├── grafana-node-dashboard.json
-    ├── mithril.service
-    ├── ngrok.service
-    ├── pgpass
-    ├── prometheus.yml
-    └── squid.service
+    │   ├── migration-1-0000-20190730.sql
+    │   ├── …
+    │   └── migration-4-0008-20240604.sql
+    └── services
+        ├── blockfrost-platform.service
+        ├── cardano-node.service
+        ├── cardano-db-sync.service
+        ├── grafana-mithril-dashboard.json
+        ├── grafana-node-dashboard.json
+        ├── mithril.service
+        ├── ngrok.service
+        ├── pgpass
+        ├── prometheus.yml
+        └── squid.service
 ```
 
 </details>

@@ -7,6 +7,8 @@ REPO_ROOT="$(cd "$source_from/.." && pwd)"
 source "$source_from/../env"
 
 CONFIG_SOURCE="$REPO_ROOT/configs/node/$NODE_VERSION/$NODE_NETWORK"
+SERVICES_SOURCE="${SERVICES_SOURCE:-$REPO_ROOT/configs/services}"
+SCHEMA_SOURCE="${SCHEMA_SOURCE:-$REPO_ROOT/configs/schema}"
 
 NETWORK_ARG=
 case $NODE_NETWORK in

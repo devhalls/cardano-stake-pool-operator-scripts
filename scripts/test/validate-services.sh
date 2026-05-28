@@ -6,10 +6,22 @@ services_validate_release_id() {
 }
 
 services_validate_dir() {
-    if [ -d "$REPO_ROOT/services" ]; then
-        echo "$REPO_ROOT/services"
-    elif [ -d "$NODE_HOME/services" ]; then
-        echo "$NODE_HOME/services"
+    if [ -n "$SERVICES_SOURCE" ] && [ -d "$SERVICES_SOURCE" ]; then
+        echo "$SERVICES_SOURCE"
+    elif [ -d "$REPO_ROOT/configs/services" ]; then
+        echo "$REPO_ROOT/configs/services"
+    elif [ -d "$NODE_HOME/configs/services" ]; then
+        echo "$NODE_HOME/configs/services"
+    fi
+}
+
+services_validate_schema_dir() {
+    if [ -n "$SCHEMA_SOURCE" ] && [ -d "$SCHEMA_SOURCE" ]; then
+        echo "$SCHEMA_SOURCE"
+    elif [ -d "$REPO_ROOT/configs/schema" ]; then
+        echo "$REPO_ROOT/configs/schema"
+    elif [ -d "$NODE_HOME/configs/schema" ]; then
+        echo "$NODE_HOME/configs/schema"
     fi
 }
 
@@ -158,10 +170,11 @@ services_validate_templates_manifest() {
 
 services_validate_deploy_manifest() {
     local manifest="$1"
-    local services_dir errors=0
+    local services_dir schema_dir errors=0
     local line kind env_var template subs optional rendered path
 
     services_dir="$(services_validate_dir)"
+    schema_dir="$(services_validate_schema_dir)"
     if [ -z "$services_dir" ] || [ ! -d "$services_dir" ]; then
         echo "services directory not found"
         return 1
@@ -275,12 +288,12 @@ services_validate_deploy_manifest() {
                     continue
                 fi
                 local head_file="$line"
-                if [ ! -f "$services_dir/schema/$head_file" ]; then
-                    echo "schema head missing: $services_dir/schema/$head_file"
+                if [ -z "$schema_dir" ] || [ ! -f "$schema_dir/$head_file" ]; then
+                    echo "schema head missing: ${schema_dir:-configs/schema}/$head_file"
                     errors=$((errors + 1))
                 fi
                 local count
-                count="$(find "$services_dir/schema" -maxdepth 1 -name 'migration-*.sql' 2>/dev/null | wc -l | tr -d ' ')"
+                count="$(find "$schema_dir" -maxdepth 1 -name 'migration-*.sql' 2>/dev/null | wc -l | tr -d ' ')"
                 echo "schema migrations: $count files (head=$head_file)"
                 ;;
         esac
@@ -291,11 +304,11 @@ services_validate_deploy_manifest() {
 
 services_validate_schema_manifest() {
     local manifest="$1"
-    local services_dir errors=0
+    local schema_dir errors=0
     local line kind env_var expected head_file count
 
-    services_dir="$(services_validate_dir)"
-    [ -d "$services_dir" ] || return 1
+    schema_dir="$(services_validate_schema_dir)"
+    [ -d "$schema_dir" ] || return 1
 
     while IFS= read -r line || [ -n "$line" ]; do
         line="${line%%#*}"
@@ -323,11 +336,11 @@ services_validate_schema_manifest() {
                     continue
                 fi
                 head_file="$line"
-                if [ ! -f "$services_dir/schema/$head_file" ]; then
-                    echo "schema head missing: $services_dir/schema/$head_file"
+                if [ ! -f "$schema_dir/$head_file" ]; then
+                    echo "schema head missing: $schema_dir/$head_file"
                     errors=$((errors + 1))
                 fi
-                count="$(find "$services_dir/schema" -maxdepth 1 -name 'migration-*.sql' 2>/dev/null | wc -l | tr -d ' ')"
+                count="$(find "$schema_dir" -maxdepth 1 -name 'migration-*.sql' 2>/dev/null | wc -l | tr -d ' ')"
                 echo "schema migrations: $count files (head=$head_file)"
                 ;;
         esac

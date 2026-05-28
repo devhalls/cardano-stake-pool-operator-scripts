@@ -10,7 +10,8 @@ Bash toolkit for **Cardano Stake Pool Operators**: install and run nodes, option
 | `scripts/node/` | Build, download, install, update, mithril, icebreaker helpers |
 | `scripts/test/` | Smoke + integration test harness (`test.sh`); release manifests under `releases/` |
 | `configs/node/<version>/<network>/` | Pinned node config bundles (e.g. `11.0.1` × `mainnet` / `preview` / `preprod` / `sanchonet`) |
-| `services/` | Systemd unit templates + db-sync SQL schema migrations |
+| `configs/services/` | Systemd unit templates (`$SERVICES_SOURCE`) |
+| `configs/schema/` | cardano-db-sync SQL migrations (`$SCHEMA_SOURCE`) |
 | `docker/` | Local testnet stack (not for mainnet); `docker/script.sh` wraps `scripts/` in the container |
 | `docker/fixture.sh` | Destructive key/register flows for dev (not `test.sh fixture`) |
 | `env.example` / `env.docker` | Definitive env templates; runtime `env` is gitignored |
@@ -84,7 +85,7 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 1. **Bash style:** Match existing scripts — `source common.sh`, `print` for messages, `_foo_fail` helpers, `case $1 in` dispatch, header `Usage:` comment block.
 2. **Env changes:** Update `env.example`, `env.docker`, and `scripts/test/releases/<version>.manifest` (and `.docker.manifest` if Docker-only pins). Run smoke.
 3. **New config file per network:** Add to `configs/node/<version>/<network>/` and `*.configs.manifest`.
-4. **New systemd template:** Add to `services/` and `*.services.manifest` with correct `SERVICE` / substitution vars.
+4. **New systemd template:** Add to `configs/services/` and `*.services.manifest` with correct `SERVICE` / substitution vars.
 5. **Version bump:** Copy all release manifests; update pins, schema head, build flake pins; see `scripts/test/releases/README.md`.
 6. **Minimal diffs:** No drive-by refactors; this repo favors explicit shell over heavy abstraction.
 7. **Secrets:** Never commit `env`, keys under `$NETWORK_PATH/keys`, or API tokens.

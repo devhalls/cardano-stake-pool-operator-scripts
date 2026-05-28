@@ -64,7 +64,7 @@ icebreaker_download() {
 
 icebreaker_install() {
     _require_relay_node || return 1
-    local dir="$(dirname "$0")/../../services"
+    local dir="$SERVICES_SOURCE"
     print 'ICEBREAKER' "Creating icebreaker service: $ICEBREAKER_SERVICE"
     cp -p "$dir/$ICEBREAKER_NAME.service" "$dir/$ICEBREAKER_SERVICE.temp" || _icebreaker_fail 'Could not copy service template' || return 1
     sed -i "$dir/$ICEBREAKER_SERVICE.temp" \

@@ -21,7 +21,6 @@ services:
             - "./../configs:${NODE_HOME}/configs"
             - "./../docs:${NODE_HOME}/docs"
             - "./../scripts:${NODE_HOME}/scripts"
-            - "./../services:${NODE_HOME}/services"
             - "./../env.docker:${NODE_HOME}/env.docker"
             - "./entrypoint.node.sh:${NODE_HOME}/entrypoint.node.sh"
             - "./bin:${BIN_PATH}"

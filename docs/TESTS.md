@@ -129,9 +129,11 @@ Definitive env contract — validated in three on-disk files and at runtime:
 | `PACKAGED` | Env service name must match the distro unit (`prometheus.service`, etc.) |
 | `SCHEMA_PIN` / `SCHEMA_HEAD` | Only when db-sync is installed (`$DB_SYNC` binary or `$DB_SYNC_PATH/schema` migrations present) |
 
-**Templates:** every `SERVICE` / `OPTIONAL_SERVICE` / `UNIT_STATIC` line must have a file under `services/` with valid systemd unit sections; substitution vars from the manifest must appear in the template.
+**Templates:** every `SERVICE` / `OPTIONAL_SERVICE` / `UNIT_STATIC` line must have a file under `configs/services/` with valid systemd unit sections; substitution vars from the manifest must appear in the template.
 
-**Docker vs local:** templates are read from `$REPO_ROOT/services` (mounted in Docker). Deployed-unit diffs are skipped in Docker / non-systemd hosts; template and schema checks still run.
+**Schema:** `SCHEMA_PIN` / `SCHEMA_HEAD` refer to migrations under `configs/schema/` (`$SCHEMA_SOURCE`).
+
+**Docker vs local:** templates and schema are read from `$SERVICES_SOURCE` and `$SCHEMA_SOURCE` (under `$NODE_HOME/configs/`, mounted in Docker). Deployed-unit diffs are skipped in Docker / non-systemd hosts; template and schema checks still run.
 
 ### Configs (`<version>.configs.manifest`)
 

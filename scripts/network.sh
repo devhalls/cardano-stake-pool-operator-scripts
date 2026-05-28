@@ -34,7 +34,7 @@ _require_warm_node() {
 
 network_ngrok_install() {
     _require_warm_node || return 1
-    local servicesDir="$(dirname "$0")/../services"
+    local servicesDir="$SERVICES_SOURCE"
 
     curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc |
         sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null &&
