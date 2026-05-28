@@ -254,12 +254,12 @@ version_ge() {
 
 cardano_cli_version() {
     local binary="${1:-$CNCLI}"
-    $binary --version 2>/dev/null | awk '{print $2}'
+    $binary --version 2>/dev/null | awk 'NR==1 {print $2; exit}'
 }
 
 cardano_node_version() {
     local binary="${1:-$CNNODE}"
-    $binary --version 2>/dev/null | awk '{print $2}'
+    $binary --version 2>/dev/null | awk 'NR==1 {print $2; exit}'
 }
 
 parse_cardano_cli_min_fee() {
