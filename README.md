@@ -162,7 +162,9 @@ also simply open an issue with the tag "enhancement". Don't forget to give the p
 
 Distributed under the GPL-3.0 License. See LICENSE.txt for more information.
 
-### Links
+---
+
+## Links
 
 - [Cardano testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet/)
 - [Db-sync snapshots](https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html)

@@ -177,7 +177,7 @@ Updated automatically by `test.sh --report` or `test.sh report`. Do not edit the
 <!-- TEST_RESULTS_START -->
 ## Last run
 
-- **Time:** 2026-05-28 00:53:34 UTC
+- **Time:** 2026-05-28 01:22:13 UTC
 - **Git:** n/a
 - **Environment:** docker | network=sanchonet | type=relay
 - **Suite:** all
