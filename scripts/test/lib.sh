@@ -14,7 +14,22 @@ TEST_RUN_LINES=""
 
 TEST_SCRIPTS_DIR="${TEST_SCRIPTS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 TEST_REPO_ROOT="${TEST_REPO_ROOT:-$REPO_ROOT}"
-TEST_DOCS_FILE="${TEST_DOCS_FILE:-$TEST_REPO_ROOT/docs/TESTS.md}"
+
+# Resolve docs/TESTS.md (host repo root or $NODE_HOME/docs when mounted in Docker)
+test_resolve_docs_file() {
+    local root docs_dir
+    for root in "$TEST_REPO_ROOT" "$(cd "$TEST_SCRIPTS_DIR/.." && pwd)"; do
+        [ -n "$root" ] || continue
+        docs_dir="$root/docs"
+        if [ -f "$docs_dir/TESTS.md" ] || [ -d "$docs_dir" ]; then
+            echo "$docs_dir/TESTS.md"
+            return 0
+        fi
+    done
+    return 1
+}
+
+TEST_DOCS_FILE="${TEST_DOCS_FILE:-$(test_resolve_docs_file 2>/dev/null || echo "$TEST_REPO_ROOT/docs/TESTS.md")}"
 
 if [ -f /.dockerenv ]; then
     TEST_IN_DOCKER=1
@@ -147,6 +162,15 @@ require_drep_keys() {
     return 0
 }
 
+require_producer_node() {
+    [ "$NODE_TYPE" = "producer" ]
+}
+
+require_network_config() {
+    assert_file_exists "$NETWORK_PATH/$1" >/dev/null 2>&1 || return 1
+    return 0
+}
+
 # --- runner ---
 
 skip_test() {
@@ -237,12 +261,29 @@ test_environment_label() {
 
 test_write_report() {
     local suite="${1:-all}"
-    local docs_file="$TEST_DOCS_FILE"
+    local docs_file docs_dir
 
-    if [ ! -f "$docs_file" ]; then
-        print 'TEST' "Docs file not found: $docs_file (mount docs/ or run from repo root)" $red
+    if ! docs_file="$(test_resolve_docs_file)"; then
+        print 'TEST' "Docs path not available inside this environment" $red
+        echo "  Expected: \$REPO_ROOT/docs/TESTS.md (e.g. /home/ubuntu/Cardano/docs/TESTS.md in Docker)"
+        echo "  Recreate the node container so docs/ is mounted: ./docker/run.sh up -d"
+        echo "  Or run --report from the host repo: ./scripts/test.sh $suite --report"
         return 1
     fi
+
+    docs_dir="$(dirname "$docs_file")"
+    if [ ! -d "$docs_dir" ]; then
+        print 'TEST' "Docs directory missing: $docs_dir" $red
+        echo "  Recreate the node container: ./docker/run.sh up -d"
+        return 1
+    fi
+
+    if [ ! -f "$docs_file" ]; then
+        print 'TEST' "Creating $docs_file (docs dir is mounted but TESTS.md was missing)" $orange
+        printf '%s\n' '# Tests' '' '> Auto-created shell; run report again after merging with docs/TESTS.md from the repo.' '' >>"$docs_file"
+    fi
+
+    TEST_DOCS_FILE="$docs_file"
 
     local git_sha=""
     if command -v git >/dev/null 2>&1 && [ -d "$TEST_REPO_ROOT/.git" ]; then

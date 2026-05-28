@@ -422,13 +422,14 @@ Once your containers are running, you can run the fixtures and any node operatio
 # OR Connect to the cardano node container and work directly from there
 docker exec -it node bash
 
-# Run integration tests (see docs/TESTS.md)
+# Run tests (see docs/TESTS.md)
 ./docker/script.sh test.sh smoke
+./docker/script.sh test.sh integration
 ./docker/script.sh test.sh all
 ./docker/script.sh test.sh report
 ```
 
-See [docs/TESTS.md](docs/TESTS.md) for suite details, fixture flows, and generated test output.
+See [docs/TESTS.md](docs/TESTS.md) for smoke/integration coverage and generated test output. Wallet and pool setup use `./docker/fixture.sh`, not `test.sh`.
 
 ### Managing the containers
 

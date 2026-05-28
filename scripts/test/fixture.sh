@@ -1,5 +1,6 @@
 #!/bin/bash
 # Fixture-parity destructive tests — mirror docker/fixture.sh flows.
+# Not wired into test.sh (smoke + integration only). Re-enable by sourcing from test.sh.
 
 # Defaults for spo_register when args omitted
 FIXTURE_RELAY_ADDR="${FIXTURE_RELAY_ADDR:-${NODE_HOSTADDR:-127.0.0.1}}"

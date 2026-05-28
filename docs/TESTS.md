@@ -1,19 +1,27 @@
-# Tests
+# Integration tests
 
-Script integration tests for the SPO operational toolkit. Tests invoke the same `scripts/*.sh` entry points used in production and in [docker/fixture.sh](../docker/fixture.sh), with per-case pass/fail reporting.
+Script integration tests for the SPO operational toolkit. Each case runs the same `scripts/*.sh` entry points used in production, with per-test pass, fail, or skip reporting.
+
+[README](../README.md) · [scripts/test.sh](../scripts/test.sh) · [Release manifests](../scripts/test/releases/) · [docker/fixture.sh](../docker/fixture.sh) (wallet/pool setup, not part of `test.sh`)
+
+**Summary:** `smoke` validates env and services against versioned manifests. `integration` runs read-only chain queries when a socket is available. Use `--report` to refresh the generated results section at the bottom of this file.
+
+---
 
 ## Prerequisites
 
-### Docker (recommended for integration and fixture suites)
+### Docker (recommended for integration)
 
 1. Start the stack: `./docker/run.sh up -d --build`
 2. Wait until the node is synced and the socket exists at `/ipc/node.socket` inside the container.
-3. For **fixture** register/submit flows, fund `payment.addr` via the [testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet).
+3. Optional wallet integration tests: create keys with [docker/fixture.sh](../docker/fixture.sh) and fund `payment.addr` via the [testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet).
 
 ### Local
 
 1. Copy `env.example` to `env` and configure paths.
-2. **smoke** runs without a node; **integration** and **fixture** skip automatically if the socket is unavailable.
+2. **smoke** runs without a node; **integration** skips automatically if the socket is unavailable.
+
+---
 
 ## Running tests
 
@@ -23,12 +31,19 @@ Script integration tests for the SPO operational toolkit. Tests invoke the same 
 # From repository root
 ./docker/script.sh test.sh smoke
 ./docker/script.sh test.sh integration
-./docker/script.sh test.sh fixture address
 ./docker/script.sh test.sh all
 ./docker/script.sh test.sh list
 
-# Update generated results below
+# Update generated results in this file (requires docs/ volume — see below)
+./docker/script.sh test.sh smoke --report
+./docker/script.sh test.sh integration --report
 ./docker/script.sh test.sh report
+```
+
+**Updating docs from Docker:** `test.sh` writes to `$NODE_HOME/docs/TESTS.md`, which is this file on the host via the `docs/` bind mount. If you see `Docs path not available`, recreate the node container so the volume is applied:
+
+```shell
+./docker/run.sh up -d
 ```
 
 ### Inside the container
@@ -36,6 +51,7 @@ Script integration tests for the SPO operational toolkit. Tests invoke the same 
 ```shell
 docker exec -it node bash
 $NODE_HOME/scripts/test.sh smoke
+$NODE_HOME/scripts/test.sh smoke --report
 ```
 
 ### Local / sos
@@ -55,6 +71,19 @@ $NODE_HOME/scripts/test.sh smoke
 | `--report` | After the run, update the generated results section in this file |
 | `--release <VERSION>` | Validate env against `scripts/test/releases/<VERSION>.manifest` (default: `$NODE_VERSION`) |
 
+---
+
+## Test suites
+
+| Suite | Mutates state | Requires socket | Requires funded wallet |
+|-------|---------------|-----------------|------------------------|
+| `smoke` | No | No | No |
+| `integration` | No | Yes | No (wallet query tests skip without keys) |
+
+`test.sh report` and `test.sh all` run **smoke**, then **integration**. Destructive setup (keys, registration, pool, DRep) stays in [docker/fixture.sh](../docker/fixture.sh), not in `test.sh`.
+
+---
+
 ## Smoke test coverage
 
 | Test | What it validates |
@@ -66,6 +95,8 @@ $NODE_HOME/scripts/test.sh smoke
 | `smoke_cardano_cli` | `cardano-cli` available (`node.sh version`) |
 | `smoke_help_*` | Each script exposes a `Usage:` help block |
 | `smoke_install_validate` | Fresh install pre-check (skipped when keys already exist) |
+
+---
 
 ## Release manifests (version contract)
 
@@ -81,11 +112,9 @@ Smoke tests treat **`NODE_VERSION`** (or `--release <VERSION>`) as the repo rele
 
 `smoke_env_template_drift` fails if a key exists in the template but not in the manifest, or vice versa.
 
-**Docker vs local:** base manifest always applies; `*.docker.manifest` applies only in Docker for extra `PIN` values (socket path, mithril version, etc.). Output includes `env_profile=docker` or `env_profile=local`.
+**Docker vs local:** the base manifest always applies; `*.docker.manifest` applies only in Docker for extra `PIN` values (socket path, mithril version, etc.). Output includes `env_profile=docker` or `env_profile=local`.
 
 ### Services (`<version>.services.manifest`)
-
-Validates deployable artefacts for the same release:
 
 | Line type | Meaning |
 |-----------|---------|
@@ -100,84 +129,63 @@ Validates deployable artefacts for the same release:
 **Optional installs:** node-only setups without db-sync, mithril, ngrok, or icebreaker report `optional component not installed` and do not fail. Schema pins are skipped when db-sync is not installed.
 
 ```shell
-# Validate a specific release contract
 ./docker/script.sh test.sh smoke --release 11.0.1
 ```
+
+---
 
 ## What developers must maintain
 
 When you change a **release** (node, db-sync, mithril, schema, or env layout):
 
 1. **`env.example`** and **`env.docker`** — keep keys aligned; docker-only values stay in `env.docker`.
-2. **`scripts/test/releases/<version>.manifest`** — add/update `REQUIRED`/`OPTIONAL`/`PIN` for every env key.
+2. **`scripts/test/releases/<version>.manifest`** — add/update `REQUIRED` / `OPTIONAL` / `PIN` for every env key.
 3. **`scripts/test/releases/<version>.docker.manifest`** — Docker-only `PIN` overrides.
-4. **`scripts/test/releases/<version>.services.manifest`** — `SERVICE` lines (env var, template, substitution vars), `SCHEMA_HEAD` when migrations change.
+4. **`scripts/test/releases/<version>.services.manifest`** — `SERVICE` lines, substitution vars, `SCHEMA_HEAD` when migrations change.
 5. **`configs/node/<version>/<network>/`** — config trees for pinned `NODE_VERSION` / networks.
-6. Run **`./docker/script.sh test.sh smoke`** before tagging; use **`test.sh report`** to refresh generated results below.
+6. Run **`./docker/script.sh test.sh smoke`** before tagging; use **`--report`** to refresh generated results below.
 
 Adding a new release (e.g. `12.0.0`): copy all three manifest files from the previous version, update pins and schema head, then run smoke with `--release 12.0.0`.
 
-## Suites
+---
 
-| Suite | Mutates state | Requires socket | Requires funded wallet |
-|-------|---------------|-----------------|------------------------|
-| `smoke` | No | No | No |
-| `integration` | No | Yes | No |
-| `fixture` | Yes | Yes | For register/submit steps |
+## Integration query coverage
 
-## Fixture subcommands
+Requires a synced node and socket. Core chain queries always run; wallet and producer queries skip when keys or `NODE_TYPE` are absent.
 
-Run a single flow (same steps as `docker/fixture.sh`):
+| Group | Tests |
+|-------|-------|
+| Tip | `slot`, `epoch`, `block`, `hash` |
+| Params | `minPoolCost`, `stakeAddressDeposit`, `params.json` written |
+| Metrics | full export, `cardano_node_metrics` series present |
+| Config | `config.json` readable |
+| KES period | `kes_period` (uses genesis + tip) |
+| Wallet | `uxto`, `rewards`, `key payment.addr` (skip until keys exist — use `docker/fixture.sh`) |
+| Producer | `kes`, `leader next` (needs `NODE_TYPE=producer` + pool keys) |
 
-```shell
-./docker/script.sh test.sh fixture address
-./docker/script.sh test.sh fixture address_register
-./docker/script.sh test.sh fixture spo
-./docker/script.sh test.sh fixture spo_register <relayIp> <port> <metadataUrl>
-./docker/script.sh test.sh fixture drep <metadataUrl>
-./docker/script.sh test.sh fixture drep_register
-./docker/script.sh test.sh fixture drep_delegate
-```
-
-Environment overrides for defaults:
-
-- `FIXTURE_RELAY_ADDR`, `FIXTURE_RELAY_PORT`, `FIXTURE_METADATA_URL`
-
-## Fixture parity (test → commands)
-
-| Test group | Script commands |
-|------------|-----------------|
-| `fixture_address_*` | `address.sh generate_payment_keys`, `generate_stake_keys`, `generate_payment_address`, `generate_stake_address` |
-| `fixture_address_register` | `query.sh params stakeAddressDeposit`, `address.sh generate_stake_reg_cert`, `tx.sh stake_reg_raw`, `stake_reg_sign`, `submit` |
-| `fixture_spo_*` | `query.sh params`, `kes_period`, `pool.sh generate_kes_keys`, `generate_node_keys`, `generate_node_op_cert`, `generate_vrf_keys` |
-| `fixture_spo_register` | `pool.sh generate_pool_meta_hash`, `generate_pool_reg_cert`, `address.sh generate_stake_del_cert`, `tx.sh pool_reg_*`, `submit`, `pool.sh get_pool_id` |
-| `fixture_drep_*` | `govern.sh drep_keys`, `drep_id`, `drep_cert`, `tx.sh drep_reg_*`, `submit` |
-| `fixture_drep_delegate` | `govern.sh drep_id`, `address.sh generate_stake_vote_cert`, `tx.sh build/sign/submit` (uses `$DELE_VOTE_CERT`, `$PAYMENT_KEY`, `$STAKE_KEY`) |
-
-## Stateful caveats
-
-- Re-running **address** key tests fails if `$NETWORK_PATH/keys` already exists; remove keys or use a fresh container volume.
-- **spo_register** and **drep** require a metadata URL argument (public HTTP URL for on-chain metadata).
-- Interactive overwrite prompts in scripts are avoided when keys already exist — those tests are skipped with a reason.
+---
 
 ## Generated results
+
+Updated automatically by `test.sh --report` or `test.sh report`. Do not edit the block between the markers by hand.
 
 <!-- TEST_RESULTS_START -->
 ## Last run
 
-- **Time:** 2026-05-27 23:19:52 UTC
-- **Git:** 9a73b57
-- **Environment:** local | network=sanchonet | type=relay
+- **Time:** 2026-05-28 00:18:05 UTC
+- **Git:** n/a
+- **Environment:** docker | network=sanchonet | type=relay
 - **Suite:** all
-- **Summary:** passed=14 failed=0 skipped=3
+- **Summary:** passed=27 failed=0 skipped=6
 
 ### Results
 
 ```
-PASS | smoke_env_node_network
-PASS | smoke_env_network_path
+PASS | smoke_env_release
+PASS | smoke_env_template_drift
+PASS | smoke_services_release
 PASS | smoke_config_source
-SKIP | smoke_cardano_cli | cardano-cli not found at /home/ubuntu/local/bin/sanchonet/cardano-cli (skipped outside docker/install)
+PASS | smoke_cardano_cli
 PASS | smoke_help_address
 PASS | smoke_help_query
 PASS | smoke_help_pool
@@ -188,8 +196,23 @@ PASS | smoke_help_dbsync
 PASS | smoke_help_network
 PASS | smoke_help_midnight
 PASS | smoke_help_node_install
-PASS | smoke_install_validate
-SKIP | integration_suite | node socket not available at /ipc/node.socket
-SKIP | fixture_suite | node socket not available at /ipc/node.socket
+SKIP | smoke_install_validate | keys directory already exists (installed environment)
+PASS | integration_query_tip_slot
+PASS | integration_query_tip_epoch
+PASS | integration_query_tip_block
+PASS | integration_query_tip_hash
+PASS | integration_query_params_min_pool_cost
+PASS | integration_query_params_stake_deposit
+PASS | integration_query_params_writes_json
+PASS | integration_query_metrics
+PASS | integration_query_metrics_cardano_series
+PASS | integration_node_version
+PASS | integration_query_config_json
+PASS | integration_query_kes_period
+SKIP | integration_query_uxto | payment.addr missing — create keys with docker/fixture.sh address
+SKIP | integration_query_rewards | stake.addr missing — create keys with docker/fixture.sh address
+SKIP | integration_query_key_payment_addr | payment.addr key missing
+SKIP | integration_query_kes | NODE_TYPE=relay — kes query requires producer
+SKIP | integration_query_leader_next | NODE_TYPE=relay — leader query requires producer
 ```
 <!-- TEST_RESULTS_END -->

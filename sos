@@ -1,0 +1,45 @@
+#!/bin/bash
+# Usage: node.sh (
+#   address [...params<MIXED>] |
+#   dbsync [...params<MIXED>] |
+#   govern [...params<MIXED>] |
+#   midnight [...params<MIXED>] |
+#   network [...params<MIXED>] |
+#   node [...params<MIXED>] |
+#   pool [...params<MIXED>] |
+#   query [...params<MIXED>] |
+#   tx [...params<MIXED>] |
+#   test [...params<MIXED>] |
+#   help [-h]
+# )
+#
+# Info:
+#
+#   - address)
+#   - dbsync)
+#   - govern)
+#   - midnight)
+#   - network)
+#   - node)
+#   - pool)
+#   - query)
+#   - tx)
+#   - test)
+#   - help) View this files help. Default value if no option is passed.
+
+source "$(dirname "$0")/scripts/common.sh"
+
+case $1 in
+    address) bash $(dirname "$0")/scripts/address.sh "${@:2}" ;;
+    dbsync) bash $(dirname "$0")/scripts/dbsync.sh "${@:2}" ;;
+    govern) bash $(dirname "$0")/scripts/govern.sh "${@:2}" ;;
+    midnight) bash $(dirname "$0")/scripts/midnight.sh "${@:2}" ;;
+    network) bash $(dirname "$0")/scripts/network.sh "${@:2}" ;;
+    node) bash $(dirname "$0")/scripts/node.sh "${@:2}" ;;
+    pool) bash $(dirname "$0")/scripts/pool.sh "${@:2}" ;;
+    query) bash $(dirname "$0")/scripts/query.sh "${@:2}" ;;
+    tx) bash $(dirname "$0")/scripts/tx.sh "${@:2}" ;;
+    test) bash $(dirname "$0")/scripts/test.sh "${@:2}" ;;
+    help) help "${2:-"--help"}" ;;
+    *) help "${1:-"--help"}" ;;
+esac
