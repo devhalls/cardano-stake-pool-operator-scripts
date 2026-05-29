@@ -1831,7 +1831,7 @@
                     "disableTextWrap": false,
                     "editorMode": "builder",
                     "exemplar": true,
-                    "expr": "cardano_node_metrics_connectionManager_inboundConns_int{alias=\"$relays\"}",
+                    "expr": "cardano_node_metrics_peerSelection_ActivePeers_int{alias=\"$relays\"}",
                     "format": "time_series",
                     "fullMetaSearch": false,
                     "includeNullMetadata": true,
@@ -1919,8 +1919,18 @@
                     "hide": false,
                     "instant": true,
                     "interval": "",
-                    "legendFormat": "Relay1",
+                    "legendFormat": "{{alias}}",
                     "refId": "A"
+                },
+                {
+                    "editorMode": "code",
+                    "exemplar": true,
+                    "expr": "cardano_node_metrics_txsProcessedNum_counter{alias=\"block-producer-node\"}",
+                    "hide": false,
+                    "instant": true,
+                    "interval": "",
+                    "legendFormat": "BP",
+                    "refId": "B"
                 }
             ],
             "title": "TX's processed",

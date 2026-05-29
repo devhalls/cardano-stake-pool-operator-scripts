@@ -79,7 +79,7 @@
       "severity": "Info"
     },
     "Mempool": {
-      "severity": "Silence"
+      "severity": "Info"
     },
     "Mempool.AttemptAdd": {
       "severity": "Silence"

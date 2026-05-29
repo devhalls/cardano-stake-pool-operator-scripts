@@ -108,6 +108,21 @@ configs_validate_apply_manifest() {
                     topology-relay.json|topology-producer.json)
                         echo "ok: $network/$rel_path (rendered on sync)"
                         ;;
+                    config.json|config-bp.json)
+                        if ! configs_validate_json_file "$full"; then
+                            errors=$((errors + 1))
+                        elif ! command -v jq >/dev/null 2>&1; then
+                            echo "ok: $network/$rel_path"
+                        elif ! jq -e '.UseTraceDispatcher == true' "$full" >/dev/null 2>&1; then
+                            echo "UseTraceDispatcher must be true: $network/$rel_path"
+                            errors=$((errors + 1))
+                        elif [ "$(jq -r '.TraceOptions.Mempool.severity // empty' "$full")" != "Info" ]; then
+                            echo "TraceOptions.Mempool.severity must be Info (txsProcessedNum metrics): $network/$rel_path"
+                            errors=$((errors + 1))
+                        else
+                            echo "ok: $network/$rel_path"
+                        fi
+                        ;;
                     *.json)
                         if ! configs_validate_json_file "$full"; then
                             errors=$((errors + 1))
