@@ -105,6 +105,9 @@ configs_validate_apply_manifest() {
                             echo "ok: $network/$rel_path"
                         fi
                         ;;
+                    topology-relay.json|topology-producer.json)
+                        echo "ok: $network/$rel_path (rendered on sync)"
+                        ;;
                     *.json)
                         if ! configs_validate_json_file "$full"; then
                             errors=$((errors + 1))

@@ -1,0 +1,5 @@
+{
+  "_comment": "Producer topology is generated at sync from NODE_TOPOLOGY_RELAY_HOSTS and NODE_PORT in env.",
+  "peerSnapshotFile": "peer-snapshot.json",
+  "useLedgerAfterSlot": 185500763
+}

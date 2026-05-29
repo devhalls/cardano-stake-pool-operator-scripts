@@ -14,7 +14,7 @@
 # Info:
 #
 #   - update) Updates a cardano node to $NODE_VERSION. Default value if no options are passed.
-#   - configs) Sync node config files from the repo (overwrites bundled files).
+#   - configs) Sync node config files from the repo (overwrites bundled files; prompts for topology).
 #   - target) Get the target cardano node version from the env file.
 #   - current) Get the current node version.
 #   - check) Check if there is an update available from the current version.

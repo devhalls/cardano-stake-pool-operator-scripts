@@ -1,0 +1,37 @@
+{
+  "bootstrapPeers": [
+    {
+      "address": "backbone.cardano.iog.io",
+      "port": 3001
+    },
+    {
+      "address": "backbone.mainnet.cardanofoundation.org",
+      "port": 3001
+    },
+    {
+      "address": "backbone.mainnet.emurgornd.com",
+      "port": 3001
+    }
+  ],
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "__NODE_TOPOLOGY_BP_HOST__",
+          "port": __NODE_TOPOLOGY_BP_PORT__
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
+      "valency": 1
+    }
+  ],
+  "peerSnapshotFile": "peer-snapshot.json",
+  "publicRoots": [
+    {
+      "accessPoints": [],
+      "advertise": false
+    }
+  ],
+  "useLedgerAfterSlot": 185500763
+}

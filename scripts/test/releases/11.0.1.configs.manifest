@@ -6,6 +6,8 @@ FILE config.json
 FILE db-sync-config.json
 FILE submit-api-config.json
 FILE topology.json
+FILE topology-relay.json
+FILE topology-producer.json
 FILE peer-snapshot.json
 FILE byron-genesis.json
 FILE shelley-genesis.json

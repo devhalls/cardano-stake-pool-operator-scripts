@@ -23,7 +23,7 @@
 #   - binaries) Build or download the node binaries based on $NODE_BUILD.
 #   - build) Build the node binaries from source.
 #   - download) Download the node binaries.
-#   - configs) Sync node config files from the repo (overwrites bundled files).
+#   - configs) Sync node config files from the repo (overwrites bundled files; prompts for topology).
 #   - guild) Download the guild gLiveView script.
 #   - prometheus_exporter) Install Prometheus node exporter on the block producers and all relays. The monitoringIp is only used for producer nodes.
 #   - grafana) Install Grafana on Monitoring Node only - must be a relay.
@@ -71,6 +71,172 @@ _confirm() {
     esac
 }
 
+_confirm_yes() {
+    read -p "$1 ([y]es or [N]o): "
+    case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
+        y | yes) return 0 ;;
+    esac
+    return 1
+}
+
+_topology_parse_endpoint() {
+    local spec="$1"
+    local label="$2"
+    spec="$(echo "$spec" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    if [[ "$spec" != *:* ]]; then
+        _install_fail "$label must be host:port (got: $spec)" || return 1
+    fi
+    TOPOLOGY_PARSED_HOST="${spec%:*}"
+    TOPOLOGY_PARSED_PORT="${spec##*:}"
+    if ! [[ "$TOPOLOGY_PARSED_PORT" =~ ^[0-9]+$ ]]; then
+        _install_fail "$label port must be numeric (got: $TOPOLOGY_PARSED_PORT)" || return 1
+    fi
+    return 0
+}
+
+_topology_access_points_json() {
+    local endpoints_csv="$1"
+    local label="$2"
+    local json='[]'
+    local spec
+    while IFS= read -r spec; do
+        [ -z "$spec" ] && continue
+        _topology_parse_endpoint "$spec" "$label" || return 1
+        json=$(echo "$json" | jq --arg host "$TOPOLOGY_PARSED_HOST" --argjson port "$TOPOLOGY_PARSED_PORT" \
+            '. + [{address: $host, port: $port}]') || _install_fail "Could not build access point for $spec" || return 1
+    done < <(echo "$endpoints_csv" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+    echo "$json"
+}
+
+_require_topology_env() {
+    case $NODE_TYPE in
+        producer)
+            if [ -n "${NODE_TOPOLOGY_RELAY_HOSTS:-}" ]; then
+                return 0
+            fi
+            [ -f "$CONFIG_SOURCE/topology.json" ] || \
+                _install_fail 'NODE_TOPOLOGY_RELAY_HOSTS is empty and no bundled topology.json to use' || return 1
+            return 0
+            ;;
+        relay)
+            if [ -n "${NODE_TOPOLOGY_BP_HOST:-}" ]; then
+                return 0
+            fi
+            [ -f "$CONFIG_SOURCE/topology.json" ] || \
+                _install_fail 'NODE_TOPOLOGY_BP_HOST is empty and no bundled topology.json to use' || return 1
+            return 0
+            ;;
+        *)
+            _install_fail "Unknown NODE_TYPE for topology: $NODE_TYPE" || return 1
+            ;;
+    esac
+}
+
+_render_topology_relay() {
+    local template="$1"
+    local dest="$2"
+    _require_topology_env || return 1
+    _topology_parse_endpoint "$NODE_TOPOLOGY_BP_HOST" 'NODE_TOPOLOGY_BP_HOST' || return 1
+    sed \
+        -e "s|__NODE_TOPOLOGY_BP_HOST__|${TOPOLOGY_PARSED_HOST}|g" \
+        -e "s|__NODE_TOPOLOGY_BP_PORT__|${TOPOLOGY_PARSED_PORT}|g" \
+        "$template" >"$dest" || _install_fail 'Could not render relay topology template' || return 1
+    return 0
+}
+
+_write_topology_producer() {
+    local dest="$1"
+    local template="$CONFIG_SOURCE/topology-producer.json"
+    local access_points relay_count use_ledger
+    _require_topology_env || return 1
+    access_points=$(_topology_access_points_json "$NODE_TOPOLOGY_RELAY_HOSTS" 'NODE_TOPOLOGY_RELAY_HOSTS') || \
+        _install_fail 'Could not build relay access points for producer topology' || return 1
+    relay_count=$(echo "$access_points" | jq 'length') || return 1
+    if [ "$relay_count" -lt 1 ]; then
+        _install_fail 'NODE_TOPOLOGY_RELAY_HOSTS must contain at least one relay address' || return 1
+    fi
+    use_ledger=$(jq -r '.useLedgerAfterSlot // 185500763' "$template" 2>/dev/null)
+    jq -n \
+        --argjson accessPoints "$access_points" \
+        --argjson valency "$relay_count" \
+        --argjson useLedgerAfterSlot "$use_ledger" \
+        '{
+            localRoots: [{
+                accessPoints: $accessPoints,
+                advertise: false,
+                trustable: true,
+                valency: $valency
+            }],
+            peerSnapshotFile: "peer-snapshot.json",
+            publicRoots: [{accessPoints: [], advertise: false}],
+            useLedgerAfterSlot: $useLedgerAfterSlot
+        }' >"$dest" || _install_fail 'Could not write producer topology' || return 1
+    return 0
+}
+
+_render_topology_template() {
+    local template="$1"
+    local dest="$2"
+    cp -p "$template" "$dest" || _install_fail "Could not copy topology template $template" || return 1
+    return 0
+}
+
+_install_topology_from_repo() {
+    _require_topology_env || return 1
+    if [ "$NODE_NETWORK" == 'mainnet' ]; then
+        case $NODE_TYPE in
+            producer)
+                if [ -z "${NODE_TOPOLOGY_RELAY_HOSTS:-}" ]; then
+                    _render_topology_template "$CONFIG_SOURCE/topology.json" "$NETWORK_PATH/topology.json" || return 1
+                    print 'INSTALL' 'Installed producer topology from topology.json (no relays configured)' $green
+                    return 0
+                fi
+                _write_topology_producer "$NETWORK_PATH/topology.json" || return 1
+                print 'INSTALL' 'Installed producer topology from NODE_TOPOLOGY_RELAY_HOSTS' $green
+                return 0
+                ;;
+            relay)
+                if [ -z "${NODE_TOPOLOGY_BP_HOST:-}" ]; then
+                    _render_topology_template "$CONFIG_SOURCE/topology.json" "$NETWORK_PATH/topology.json" || return 1
+                    print 'INSTALL' 'Installed relay topology from topology.json (no BP configured)' $green
+                    return 0
+                fi
+                local template_path="$CONFIG_SOURCE/topology-relay.json"
+                [ -f "$template_path" ] || _install_fail "Missing topology template: $template_path" || return 1
+                _render_topology_relay "$template_path" "$NETWORK_PATH/topology.json" || return 1
+                print 'INSTALL' 'Installed relay topology from topology-relay.json' $green
+                return 0
+                ;;
+            *)
+                _install_fail "Unknown NODE_TYPE for topology: $NODE_TYPE" || return 1
+                ;;
+        esac
+    fi
+    local template_name='topology.json'
+    local template_path="$CONFIG_SOURCE/$template_name"
+    [ -f "$template_path" ] || _install_fail "Missing topology template: $template_path" || return 1
+    _render_topology_template "$template_path" "$NETWORK_PATH/topology.json" || return 1
+    print 'INSTALL' "Installed topology from $template_name" $green
+    return 0
+}
+
+_sync_topology() {
+    if [ -f "$NETWORK_PATH/topology.json" ]; then
+        if [ -t 0 ]; then
+            print 'INSTALL' "Existing topology: $NETWORK_PATH/topology.json" $orange
+            if ! _confirm_yes 'Replace topology.json from the repo template?'; then
+                print 'INSTALL' 'Keeping existing topology.json' $orange
+                return 0
+            fi
+        else
+            print 'INSTALL' 'Non-interactive: keeping existing topology.json' $orange
+            return 0
+        fi
+    fi
+    _install_topology_from_repo || return 1
+    return 0
+}
+
 _apply_prometheus_config() {
     local config_file="$1"
     [ -f "$config_file" ] || return 0
@@ -88,6 +254,7 @@ _sync_node_configs() {
     fi
     print 'INSTALL' "Syncing config files for $NODE_NETWORK ($NODE_VERSION)"
     for C in ${CONFIG_DOWNLOADS[@]}; do
+        [ "$C" == 'topology.json' ] && continue
         if [ ! -f "$CONFIG_SOURCE/$C" ]; then
             _install_fail "Missing config file: $CONFIG_SOURCE/$C" || return 1
         fi
@@ -98,6 +265,11 @@ _sync_node_configs() {
     fi
     _apply_prometheus_config "$NETWORK_PATH/config.json" || return 1
     _apply_prometheus_config "$NETWORK_PATH/config-bp.json" || return 1
+    print 'INSTALL' "Review $CONFIG_PATH for local customisations (Prometheus port, tracing, etc.) before restart." $orange
+    if [ "$NODE_TYPE" == 'producer' ]; then
+        print 'INSTALL' "Producer also uses $NETWORK_PATH/config-bp.json — check both config files." $orange
+    fi
+    _sync_topology || return 1
     print 'INSTALL' "Synced configs for $NODE_NETWORK" $green
     return 0
 }
@@ -264,7 +436,7 @@ install() {
     install_service || return 1
     $CNNODE --version || _install_fail 'Installed cardano-node binary is not runnable' || return 1
     $CNCLI --version || _install_fail 'Installed cardano-cli binary is not runnable' || return 1
-    print 'INSTALL' "Edit your topology config at $NETWORK_PATH/topology.json" $green
+    print 'INSTALL' "Set NODE_TOPOLOGY_* host:port values in env, then: scripts/node.sh install configs" $green
     return 0
 }
 
