@@ -26,7 +26,7 @@
 # Info:
 #
 #   - install) Installs a Cardano node and all dependencies. Pass additional params to this command to call specific install functions.
-#   - update) Updates the current node version. Pass additional params to this command to call specific install functions.
+#   - update) Updates the current node version, or sync configs with `update configs`.
 #   - mithril) Download, update, and sync mithril. Pass additional params to this command to call specific mithril functions.
 #   - exec) Run $CNCLI with all passed args.
 #   - run) Run the cardano node based on the $NODE_TYPE.

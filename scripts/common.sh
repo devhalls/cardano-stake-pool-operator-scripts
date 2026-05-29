@@ -38,7 +38,7 @@ CONFIG_DOWNLOADS=(
 )
 case $NODE_NETWORK in
     "mainnet")
-        CONFIG_DOWNLOADS+=("checkpoints.json" "topology-non-bootstrap-peers.json")
+        CONFIG_DOWNLOADS+=("checkpoints.json" "topology-non-bootstrap-peers.json" "config-bp.json")
         ;;
     "preview")
         CONFIG_DOWNLOADS+=("checkpoints.json")

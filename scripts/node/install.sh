@@ -23,7 +23,7 @@
 #   - binaries) Build or download the node binaries based on $NODE_BUILD.
 #   - build) Build the node binaries from source.
 #   - download) Download the node binaries.
-#   - configs) Install node config files from the repo.
+#   - configs) Sync node config files from the repo (overwrites bundled files).
 #   - guild) Download the guild gLiveView script.
 #   - prometheus_exporter) Install Prometheus node exporter on the block producers and all relays. The monitoringIp is only used for producer nodes.
 #   - grafana) Install Grafana on Monitoring Node only - must be a relay.
@@ -71,6 +71,37 @@ _confirm() {
     esac
 }
 
+_apply_prometheus_config() {
+    local config_file="$1"
+    [ -f "$config_file" ] || return 0
+    grep -q 'PrometheusSimple suffix' "$config_file" || return 0
+    sed -i "$config_file" \
+        -e "s|PrometheusSimple suffix [^ ]* [0-9]*|PrometheusSimple suffix ${PROMETHEUS_CARDANO_HOST} ${PROMETHEUS_CARDANO_PORT}|" \
+        || _install_fail "Could not apply prometheus settings to $config_file" || return 1
+    return 0
+}
+
+_sync_node_configs() {
+    _require_warm_node || return 1
+    if [ ! -d "$CONFIG_SOURCE" ]; then
+        _install_fail "No config files found for $NODE_VERSION/$NODE_NETWORK at $CONFIG_SOURCE" || return 1
+    fi
+    print 'INSTALL' "Syncing config files for $NODE_NETWORK ($NODE_VERSION)"
+    for C in ${CONFIG_DOWNLOADS[@]}; do
+        if [ ! -f "$CONFIG_SOURCE/$C" ]; then
+            _install_fail "Missing config file: $CONFIG_SOURCE/$C" || return 1
+        fi
+        cp -p "$CONFIG_SOURCE/$C" "$NETWORK_PATH/$C" || _install_fail "Failed to copy config: $C" || return 1
+    done
+    if [[ " ${CONFIG_DOWNLOADS[*]} " != *" config-bp.json "* ]] && [ ! -f "$NETWORK_PATH/config-bp.json" ]; then
+        cp -p "$NETWORK_PATH/config.json" "$NETWORK_PATH/config-bp.json" || _install_fail 'Failed to create config-bp.json' || return 1
+    fi
+    _apply_prometheus_config "$NETWORK_PATH/config.json" || return 1
+    _apply_prometheus_config "$NETWORK_PATH/config-bp.json" || return 1
+    print 'INSTALL' "Synced configs for $NODE_NETWORK" $green
+    return 0
+}
+
 # Public functions
 
 install_validate() {
@@ -111,22 +142,7 @@ install_binaries() {
 }
 
 install_configs() {
-    _require_warm_node || return 1
-    if [ ! -d "$CONFIG_SOURCE" ]; then
-        _install_fail "No config files found for $NODE_VERSION/$NODE_NETWORK at $CONFIG_SOURCE" || return 1
-    fi
-    print 'INSTALL' "Installing config files for $NODE_NETWORK ($NODE_VERSION)"
-    for C in ${CONFIG_DOWNLOADS[@]}; do
-        if [ ! -f "$CONFIG_SOURCE/$C" ]; then
-            _install_fail "Missing config file: $CONFIG_SOURCE/$C" || return 1
-        fi
-        cp -p "$CONFIG_SOURCE/$C" "$NETWORK_PATH/$C" || _install_fail "Failed to copy config: $C" || return 1
-    done
-    if [ ! -f "$NETWORK_PATH/config-bp.json" ]; then
-        cp -p "$NETWORK_PATH/config.json" "$NETWORK_PATH/config-bp.json" || _install_fail 'Failed to create config-bp.json' || return 1
-    fi
-    print 'INSTALL' "Installed configs for $NODE_NETWORK" $green
-    return 0
+    _sync_node_configs || return 1
 }
 
 install_guild() {
@@ -162,14 +178,14 @@ install_prometheus_exporter() {
             _install_fail 'Please supply your monitoring node IP address' || return 1
         fi
         sudo ufw allow proto tcp from $monitoringIp to any port 9100 || _install_fail 'Could not configure ufw for port 9100' || return 1
-        sudo ufw allow proto tcp from $monitoringIp to any port 12798 || _install_fail 'Could not configure ufw for port 12798' || return 1
+        sudo ufw allow proto tcp from $monitoringIp to any port $PROMETHEUS_CARDANO_PORT || _install_fail "Could not configure ufw for port $PROMETHEUS_CARDANO_PORT" || return 1
         sudo ufw reload || _install_fail 'Could not reload ufw' || return 1
     fi
     sudo $PACKAGER install -y prometheus-node-exporter || _install_fail 'Could not install prometheus-node-exporter' || return 1
 
     sudo sed -i "/^ExecStart=/c\\ExecStart=$promPath --collector.textfile.directory=$NETWORK_PATH/stats --collector.textfile" "$servicePath" || \
         _install_fail 'Could not configure prometheus-node-exporter service' || return 1
-    sed -i "$CONFIG_PATH" -e "s/127.0.0.1/0.0.0.0/g" || _install_fail 'Could not update node config for prometheus' || return 1
+    _apply_prometheus_config "$CONFIG_PATH" || return 1
 
     sudo systemctl enable prometheus-node-exporter.service || _install_fail 'Could not enable prometheus-node-exporter service' || return 1
     sudo systemctl restart prometheus-node-exporter.service || _install_fail 'Could not restart prometheus-node-exporter service' || return 1

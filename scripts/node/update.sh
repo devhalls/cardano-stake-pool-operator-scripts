@@ -1,6 +1,7 @@
 #!/bin/bash
 # Usage: node/update.sh (
 #   update |
+#   configs |
 #   target |
 #   current |
 #   check |
@@ -13,6 +14,7 @@
 # Info:
 #
 #   - update) Updates a cardano node to $NODE_VERSION. Default value if no options are passed.
+#   - configs) Sync node config files from the repo (overwrites bundled files).
 #   - target) Get the target cardano node version from the env file.
 #   - current) Get the current node version.
 #   - check) Check if there is an update available from the current version.
@@ -81,6 +83,13 @@ update_binaries() {
     return 0
 }
 
+update_configs() {
+    bash "$(dirname "$0")/install.sh" configs || return 1
+    print 'UPDATE' "Node configs synced from $CONFIG_SOURCE" $green
+    print 'UPDATE' "Restart the node to apply: scripts/node.sh restart" $orange
+    return 0
+}
+
 update() {
     local latest
     latest=$(update_check_version) || return 1
@@ -97,6 +106,7 @@ update() {
 
 case $1 in
     update) update "$@" ;;
+    configs) update_configs ;;
     check) update_check_version ;;
     target) update_target_version ;;
     current) update_current_version ;;
