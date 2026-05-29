@@ -87,11 +87,29 @@
     "Mempool": {
       "severity": "Info"
     },
+    "Mempool.AddedTx": {
+      "severity": "Info"
+    },
+    "Mempool.RejectedTx": {
+      "severity": "Info"
+    },
+    "Mempool.RemoveTxs": {
+      "severity": "Info"
+    },
+    "Mempool.ManuallyRemovedTxs": {
+      "severity": "Info"
+    },
+    "Mempool.Synced": {
+      "severity": "Info"
+    },
     "Mempool.AttemptAdd": {
       "severity": "Silence"
     },
     "Mempool.SyncNotNeeded": {
       "severity": "Silence"
+    },
+    "TxSubmission.TxInbound": {
+      "severity": "Info"
     },
     "Net.ConnectionManager.Remote": {
       "severity": "Info"

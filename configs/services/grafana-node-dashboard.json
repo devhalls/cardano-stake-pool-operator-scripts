@@ -1915,21 +1915,21 @@
                 {
                     "editorMode": "code",
                     "exemplar": true,
-                    "expr": "cardano_node_metrics_txsProcessedNum_counter{alias=\"$relays\"}",
+                    "expr": "cardano_node_metrics_submissions_submitted_counter{alias=~\"$relays|block-producer-node\"}",
                     "hide": false,
                     "instant": true,
                     "interval": "",
-                    "legendFormat": "{{alias}}",
+                    "legendFormat": "submitted {{alias}}",
                     "refId": "A"
                 },
                 {
                     "editorMode": "code",
                     "exemplar": true,
-                    "expr": "cardano_node_metrics_txsProcessedNum_counter{alias=\"block-producer-node\"}",
+                    "expr": "cardano_node_metrics_txsProcessedNum_counter{alias=~\"$relays|block-producer-node\"}",
                     "hide": false,
                     "instant": true,
                     "interval": "",
-                    "legendFormat": "BP",
+                    "legendFormat": "processed {{alias}}",
                     "refId": "B"
                 }
             ],
@@ -2039,10 +2039,20 @@
                 {
                     "editorMode": "code",
                     "exemplar": true,
-                    "expr": "cardano_node_metrics_txsInMempool_int{alias=~\"$relays\"}",
+                    "expr": "cardano_node_metrics_txsInMempool_int{alias=~\"$relays|block-producer-node\"}",
                     "hide": false,
                     "interval": "",
-                    "legendFormat": "{{alias}}",
+                    "legendFormat": "in mempool {{alias}}",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "editorMode": "code",
+                    "exemplar": true,
+                    "expr": "cardano_node_metrics_txsSyncDuration_int{alias=~\"$relays|block-producer-node\"}",
+                    "hide": false,
+                    "interval": "",
+                    "legendFormat": "sync ms {{alias}}",
                     "range": true,
                     "refId": "B"
                 }

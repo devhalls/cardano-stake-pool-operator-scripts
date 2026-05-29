@@ -117,7 +117,13 @@ configs_validate_apply_manifest() {
                             echo "UseTraceDispatcher must be true: $network/$rel_path"
                             errors=$((errors + 1))
                         elif [ "$(jq -r '.TraceOptions.Mempool.severity // empty' "$full")" != "Info" ]; then
-                            echo "TraceOptions.Mempool.severity must be Info (txsProcessedNum metrics): $network/$rel_path"
+                            echo "TraceOptions.Mempool.severity must be Info (mempool metrics): $network/$rel_path"
+                            errors=$((errors + 1))
+                        elif [ "$(jq -r '.TraceOptions["TxSubmission.TxInbound"].severity // empty' "$full")" != "Info" ]; then
+                            echo "TraceOptions.TxSubmission.TxInbound.severity must be Info (submissions metrics): $network/$rel_path"
+                            errors=$((errors + 1))
+                        elif [ "$(jq -r '.TraceOptions["Mempool.ManuallyRemovedTxs"].severity // empty' "$full")" != "Info" ]; then
+                            echo "TraceOptions.Mempool.ManuallyRemovedTxs.severity must be Info (txsInMempool metrics): $network/$rel_path"
                             errors=$((errors + 1))
                         else
                             echo "ok: $network/$rel_path"
