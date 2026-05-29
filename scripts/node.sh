@@ -243,10 +243,12 @@ node_status() {
                     }')
                 IFS=$'\n' read -r -d '' -a portRows <<< "$portInfo"$'\0'
                 declare -A portConfigs=(
-                    ["0.0.0.0:6000"]="Cardano Node"
-                    ["0.0.0.0:12798"]="Cardano UI"
+                    ["0.0.0.0:${NODE_PORT}"]="Cardano Node"
+                    ["*:${NODE_PORT}"]="Cardano Node"
+                    ["${NODE_METRICS_HOST}:${NODE_METRICS_PORT}"]="Cardano metrics"
+                    ["*:${NODE_METRICS_PORT}"]="Cardano metrics"
                     ["127.0.0.1:12788"]="Cardano EKG"
-                    ["0.0.0.0:9091"]="Prometheus exporter"
+                    ["0.0.0.0:${MITHRIL_METRICS_SERVER_PORT}"]="Mithril metrics"
                     ["0.0.0.0:9100"]="Prometheus Exporter"
                     ["*:9100"]="Prometheus Exporter"
                     ["0.0.0.0:22"]="SSH"

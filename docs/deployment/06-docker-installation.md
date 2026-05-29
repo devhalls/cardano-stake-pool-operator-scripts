@@ -74,7 +74,7 @@ Bind-mounted data under `docker/node`, `docker/postgres`, and `docker/db-sync` i
 
 ### Missing or outdated configs
 
-Bundled configs under `configs/node/11.0.1/<network>/` target cardano-node **11.0.1+** (`MinNodeVersion` 11.0.1; peer snapshots use `NetworkMagic`, `Point`, and `bigLedgerPools`). After changing `NODE_VERSION` or network files, refresh the container copy:
+Bundled configs under `configs/node/11.0.1/<network>/` target cardano-node **11.0.1+** (`MinNodeVersion` 11.0.1; peer snapshots use `NetworkMagic`, `Point`, and `bigLedgerPools`). After changing `NODE_VERSION`, network files, or pool topology / metrics (`NODE_TOPOLOGY_*` / `NODE_METRICS_*` in `env`), refresh the container copy:
 
 ```shell
 ./docker/script.sh node.sh install configs

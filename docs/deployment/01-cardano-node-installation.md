@@ -37,17 +37,17 @@ ENV variables
 | `NODE_BUILD`           | `0` `1` `2`                               | The build type. 0 = do not build or download binaries. 1 = downloads node binaries. 2 = builds node binaries from source.                                                                                                                                  |
 | `NODE_PORT`            | `7777`                                    | The local node port.                                                                                                                                                                                                                                       |
 | `NODE_HOSTADDR`        | `0.0.0.0`                                 | The local node host address.                                                                                                                                                                                                                               |
+| `NODE_TOPOLOGY_BP_HOST` | `192.168.1.100:6000`                     | Relay only: block producer `host:port` for `localRoots`. Leave empty to use the bundled `topology.json` (public/bootstrap peers only). Re-rendered on every `install configs` / `update configs` when set.                                                  |
+| `NODE_TOPOLOGY_RELAY_HOSTS` | `192.168.1.101:6000,192.168.1.102:6000` | Producer only: comma-separated relay `host:port` list for `localRoots`. Leave empty to use the bundled `topology.json`. Re-rendered on every `install configs` / `update configs` when set.                                                                |
+| `NODE_METRICS_HOST` | `0.0.0.0` | Host the node binds for Prometheus-format metrics (`PrometheusSimple` in `config.json` / `config-bp.json`; applied on config sync). |
+| `NODE_METRICS_PORT` | `12798` | Port for node metrics (`/metrics`). Must match firewall rules if scraping from a monitoring relay. |
 | `NODE_KOIOS_API`       | `API endpoint`                            | API endpoint for koios, used to fetch pool data.                                                                                                                                                                                                           |
 | `NODE_SANCHO_CC_API`   | `API endpoint`                            | API endpoint for sanchonet, used to fetch pool data if using sanchonet, replaces the NODE_KOIOS_API.                                                                                                                                                       |
 | `MITHRIL_VERSION`      | `2524.0`                                  | Your mithril version. Must be > the version defined here.                                                                                                                                                                                                  |
 | `MITHRIL_RELAY_HOST`   | `http:192.168.X.X`                        | Your mithril relay host address excluding port.                                                                                                                                                                                                            |
 | `MITHRIL_RELAY_PORT`   | `1234`                                    | Your mithril relay port.                                                                                                                                                                                                                                   |
-| `BIN_PATH`             | `$HOME/local/bin`                         | Your users local bin path.                                                                                                                                                                                                                                 |
-| `PACKAGER`             | `apt-get`                                 | System package manager.                                                                                                                                                                                                                                    |
-| `SERVICE_PATH`         | `/etc/systemd/system`                     | Systemd unit install path.                                                                                                                                                                                                                                 |
-| `SERVICES_SOURCE`      | `$NODE_HOME/configs/services`             | Systemd unit templates (see `configs/services/`).                                                                                                                                                                                                        |
-| `SCHEMA_SOURCE`        | `$NODE_HOME/configs/schema`               | cardano-db-sync SQL migrations copied to `$DB_SYNC_PATH/schema` on install (see `configs/schema/`).                                                                                                                                                        |
-
+| `PROMETHEUS_SCRAPER_HOST` | `127.0.0.1` | Monitoring relay only: Prometheus scraper listen address (optional Grafana stack). |
+| `PROMETHEUS_SCRAPER_PORT` | `9090` | Monitoring relay only: Prometheus scraper UI and scrape port. |
 
 ### Node install
 
@@ -95,12 +95,19 @@ scripts/node.sh restart
 
 ### Node update
 
-When you would like to update the node, edit the env with your new target NODE_VERSION and run the node update script.
-It's not recommended to 'downgrade' a node unless you are confident you know what you are doing.
+When you would like to update the node, edit `env` with your new target `NODE_VERSION` (and review topology / metrics
+vars if needed), then run the node update script. The update stops the node, installs new binaries, syncs config files
+from the repo bundle for that version, applies `NODE_METRICS_*` and `NODE_TOPOLOGY_*` from `env`, and restarts
+the node. It is not recommended to downgrade a node unless you are confident you know what you are doing.
+
+To sync configs only (without a version bump), use `update configs`:
 
 ```shell
 nano env
-scripts/node.sh update 
+scripts/node.sh update
+# or configs only:
+scripts/node.sh update configs
+scripts/node.sh restart
 ```
 
 ### Firewall

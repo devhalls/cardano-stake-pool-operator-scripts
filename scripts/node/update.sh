@@ -96,6 +96,7 @@ update() {
     _confirm "Please confirm update to the new version: $latest?" || return 1
     bash "$(dirname "$0")/../node.sh" stop || _update_fail 'Could not stop node service' || return 1
     update_binaries || return 1
+    update_configs || return 1
     bash "$(dirname "$0")/../node.sh" restart || _update_fail 'Could not restart node service' || return 1
     source ~/.bashrc
     $CNNODE --version || _update_fail 'Installed cardano-node binary is not runnable' || return 1

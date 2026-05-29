@@ -6,7 +6,7 @@ scrape_configs:
     - job_name: prometheus
       static_configs:
           - targets:
-                - 'localhost:9090'
+                - 'localhost:__PROMETHEUS_SCRAPER_PORT__'
     - job_name: node-monitor
       fallback_scrape_protocol: PrometheusText0.0.4
       static_configs:
@@ -16,7 +16,7 @@ scrape_configs:
                 alias: block-producer-node
                 type: cardano-node
           - targets:
-                - 'node:12798'
+                - 'node:__NODE_METRICS_PORT__'
             labels:
                 alias: block-producer-node
                 type: cardano-node

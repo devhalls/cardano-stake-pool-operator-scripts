@@ -6,7 +6,7 @@ global:
 scrape_configs:
   - job_name: 'mithril-signers'
     static_configs:
-      - targets: [ 'localhost:9091' ]
+      - targets: [ 'localhost:__MITHRIL_METRICS_SERVER_PORT__' ]
 
   - job_name: 'prometheus'
     static_configs:
@@ -15,7 +15,7 @@ scrape_configs:
           alias: 'block-producer-node'
           type:  'cardano-node'
 
-      - targets: ['localhost:12798']
+      - targets: ['localhost:__NODE_METRICS_PORT__']
         labels:
           alias: 'block-producer-node'
           type:  'cardano-node'

@@ -120,20 +120,27 @@ scripts/pool.sh get_pool_id
 # COPY: pool.id to your producer node, and to your replay node for convince later. 
 ```
 
-### Edit topology and restart the producer
+### Configure topology and restart the producer
 
-To complete pool registration, edit your topology to suit your replay configuration and restart your producer node.
+Set pool topology in `env` (not by hand-editing `topology.json`). On the **producer**, list your relays; on each
+**relay**, set the block producer address. Then sync configs and restart:
 
 ```shell
-# PRODUCER: Edit your typology and add your relay configuration
-nano cardano-node/topology.json
+# PRODUCER: set relay host:port list in env
+nano env   # NODE_TOPOLOGY_RELAY_HOSTS=relay1:6000,relay2:6000
 
-# PRODUCER: Update your env NODE_TYPE=producer
+# PRODUCER: render topology from env and sync other configs
+scripts/node.sh install configs
+
+# PRODUCER: set NODE_TYPE=producer if not already
 nano env
 
-# PRODUCER: Then restart the producer
+# PRODUCER: restart
 scripts/node.sh restart
 ```
+
+On relays, set `NODE_TOPOLOGY_BP_HOST=producer-ip:6000` and run `scripts/node.sh install configs` before restart.
+Leave `NODE_TOPOLOGY_*` empty on a standalone relay or producer to keep the bundled public/bootstrap topology.
 
 ---
 

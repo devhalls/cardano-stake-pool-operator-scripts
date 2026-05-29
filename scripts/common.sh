@@ -315,6 +315,13 @@ require_cardano_node_arm64_version() {
     fi
 }
 
+node_metrics_curl_host() {
+    case "${NODE_METRICS_HOST}" in
+        0.0.0.0 | '[::]' | ::) echo '127.0.0.1' ;;
+        *) echo "${NODE_METRICS_HOST}" ;;
+    esac
+}
+
 require_dbsync_arm64_support() {
     if [[ "$(platform)" == "linux" && "$(platform_arch)" == "arm64" ]]; then
         print 'ERROR' "cardano-db-sync does not publish linux-arm64 release binaries from IntersectMBO." $red

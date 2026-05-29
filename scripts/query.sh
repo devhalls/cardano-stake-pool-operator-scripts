@@ -105,10 +105,11 @@ query_state() {
 
 query_metrics() {
     _require_warm_node || return 1
+    local metrics_url="http://$(node_metrics_curl_host):${NODE_METRICS_PORT}/metrics"
     if [ "$1" ]; then
-        curl -s localhost:12798/metrics | grep "$1"
+        curl -s "$metrics_url" | grep "$1"
     else
-        curl -s localhost:12798/metrics
+        curl -s "$metrics_url"
     fi
     return 0
 }

@@ -137,16 +137,26 @@ _render_topology_relay() {
     local dest="$2"
     _require_topology_env || return 1
     _topology_parse_endpoint "$NODE_TOPOLOGY_BP_HOST" 'NODE_TOPOLOGY_BP_HOST' || return 1
-    sed \
-        -e "s|__NODE_TOPOLOGY_BP_HOST__|${TOPOLOGY_PARSED_HOST}|g" \
-        -e "s|__NODE_TOPOLOGY_BP_PORT__|${TOPOLOGY_PARSED_PORT}|g" \
-        "$template" >"$dest" || _install_fail 'Could not render relay topology template' || return 1
+    if grep -q '__NODE_TOPOLOGY_BP_HOST__' "$template" 2>/dev/null; then
+        sed \
+            -e "s|__NODE_TOPOLOGY_BP_HOST__|${TOPOLOGY_PARSED_HOST}|g" \
+            -e "s|__NODE_TOPOLOGY_BP_PORT__|${TOPOLOGY_PARSED_PORT}|g" \
+            "$template" >"$dest" || _install_fail 'Could not render relay topology template' || return 1
+    else
+        jq \
+            --arg host "$TOPOLOGY_PARSED_HOST" \
+            --argjson port "$TOPOLOGY_PARSED_PORT" \
+            '.localRoots[0].accessPoints = [{address: $host, port: $port}]
+            | .localRoots[0].trustable = true' \
+            "$template" >"$dest" || _install_fail 'Could not render relay topology from bundled template' || return 1
+    fi
     return 0
 }
 
 _write_topology_producer() {
     local dest="$1"
     local template="$CONFIG_SOURCE/topology-producer.json"
+    [ -f "$template" ] || template="$CONFIG_SOURCE/topology.json"
     local access_points relay_count use_ledger
     _require_topology_env || return 1
     access_points=$(_topology_access_points_json "$NODE_TOPOLOGY_RELAY_HOSTS" 'NODE_TOPOLOGY_RELAY_HOSTS') || \
@@ -183,44 +193,48 @@ _render_topology_template() {
 
 _install_topology_from_repo() {
     _require_topology_env || return 1
-    if [ "$NODE_NETWORK" == 'mainnet' ]; then
-        case $NODE_TYPE in
-            producer)
-                if [ -z "${NODE_TOPOLOGY_RELAY_HOSTS:-}" ]; then
-                    _render_topology_template "$CONFIG_SOURCE/topology.json" "$NETWORK_PATH/topology.json" || return 1
-                    print 'INSTALL' 'Installed producer topology from topology.json (no relays configured)' $green
-                    return 0
-                fi
-                _write_topology_producer "$NETWORK_PATH/topology.json" || return 1
-                print 'INSTALL' 'Installed producer topology from NODE_TOPOLOGY_RELAY_HOSTS' $green
+    case $NODE_TYPE in
+        producer)
+            if [ -z "${NODE_TOPOLOGY_RELAY_HOSTS:-}" ]; then
+                _render_topology_template "$CONFIG_SOURCE/topology.json" "$NETWORK_PATH/topology.json" || return 1
+                print 'INSTALL' 'Installed producer topology from topology.json (no relays configured)' $green
                 return 0
-                ;;
-            relay)
-                if [ -z "${NODE_TOPOLOGY_BP_HOST:-}" ]; then
-                    _render_topology_template "$CONFIG_SOURCE/topology.json" "$NETWORK_PATH/topology.json" || return 1
-                    print 'INSTALL' 'Installed relay topology from topology.json (no BP configured)' $green
-                    return 0
-                fi
-                local template_path="$CONFIG_SOURCE/topology-relay.json"
-                [ -f "$template_path" ] || _install_fail "Missing topology template: $template_path" || return 1
-                _render_topology_relay "$template_path" "$NETWORK_PATH/topology.json" || return 1
-                print 'INSTALL' 'Installed relay topology from topology-relay.json' $green
+            fi
+            _write_topology_producer "$NETWORK_PATH/topology.json" || return 1
+            print 'INSTALL' 'Installed producer topology from NODE_TOPOLOGY_RELAY_HOSTS' $green
+            return 0
+            ;;
+        relay)
+            if [ -z "${NODE_TOPOLOGY_BP_HOST:-}" ]; then
+                _render_topology_template "$CONFIG_SOURCE/topology.json" "$NETWORK_PATH/topology.json" || return 1
+                print 'INSTALL' 'Installed relay topology from topology.json (no BP configured)' $green
                 return 0
-                ;;
-            *)
-                _install_fail "Unknown NODE_TYPE for topology: $NODE_TYPE" || return 1
-                ;;
-        esac
-    fi
-    local template_name='topology.json'
-    local template_path="$CONFIG_SOURCE/$template_name"
-    [ -f "$template_path" ] || _install_fail "Missing topology template: $template_path" || return 1
-    _render_topology_template "$template_path" "$NETWORK_PATH/topology.json" || return 1
-    print 'INSTALL' "Installed topology from $template_name" $green
-    return 0
+            fi
+            local template_path="$CONFIG_SOURCE/topology-relay.json"
+            [ -f "$template_path" ] || template_path="$CONFIG_SOURCE/topology.json"
+            _render_topology_relay "$template_path" "$NETWORK_PATH/topology.json" || return 1
+            print 'INSTALL' 'Installed relay topology from NODE_TOPOLOGY_BP_HOST' $green
+            return 0
+            ;;
+        *)
+            _install_fail "Unknown NODE_TYPE for topology: $NODE_TYPE" || return 1
+            ;;
+    esac
+}
+
+_topology_env_configured() {
+    case $NODE_TYPE in
+        producer) [ -n "${NODE_TOPOLOGY_RELAY_HOSTS:-}" ] ;;
+        relay) [ -n "${NODE_TOPOLOGY_BP_HOST:-}" ] ;;
+        *) return 1 ;;
+    esac
 }
 
 _sync_topology() {
+    if _topology_env_configured; then
+        _install_topology_from_repo || return 1
+        return 0
+    fi
     if [ -f "$NETWORK_PATH/topology.json" ]; then
         if [ -t 0 ]; then
             print 'INSTALL' "Existing topology: $NETWORK_PATH/topology.json" $orange
@@ -237,13 +251,23 @@ _sync_topology() {
     return 0
 }
 
-_apply_prometheus_config() {
+_apply_node_metrics_config() {
     local config_file="$1"
     [ -f "$config_file" ] || return 0
     grep -q 'PrometheusSimple suffix' "$config_file" || return 0
     sed -i "$config_file" \
-        -e "s|PrometheusSimple suffix [^ ]* [0-9]*|PrometheusSimple suffix ${PROMETHEUS_CARDANO_HOST} ${PROMETHEUS_CARDANO_PORT}|" \
-        || _install_fail "Could not apply prometheus settings to $config_file" || return 1
+        -e "s|PrometheusSimple suffix [^ ]* [0-9]*|PrometheusSimple suffix ${NODE_METRICS_HOST} ${NODE_METRICS_PORT}|" \
+        || _install_fail "Could not apply node metrics settings to $config_file" || return 1
+    return 0
+}
+
+_render_prometheus_yml() {
+    local src="$1"
+    local dest="$2"
+    sed \
+        -e "s|__NODE_METRICS_PORT__|${NODE_METRICS_PORT}|g" \
+        -e "s|__MITHRIL_METRICS_SERVER_PORT__|${MITHRIL_METRICS_SERVER_PORT}|g" \
+        "$src" >"$dest" || _install_fail 'Could not render prometheus.yml' || return 1
     return 0
 }
 
@@ -263,9 +287,9 @@ _sync_node_configs() {
     if [[ " ${CONFIG_DOWNLOADS[*]} " != *" config-bp.json "* ]] && [ ! -f "$NETWORK_PATH/config-bp.json" ]; then
         cp -p "$NETWORK_PATH/config.json" "$NETWORK_PATH/config-bp.json" || _install_fail 'Failed to create config-bp.json' || return 1
     fi
-    _apply_prometheus_config "$NETWORK_PATH/config.json" || return 1
-    _apply_prometheus_config "$NETWORK_PATH/config-bp.json" || return 1
-    print 'INSTALL' "Review $CONFIG_PATH for local customisations (Prometheus port, tracing, etc.) before restart." $orange
+    _apply_node_metrics_config "$NETWORK_PATH/config.json" || return 1
+    _apply_node_metrics_config "$NETWORK_PATH/config-bp.json" || return 1
+    print 'INSTALL' "Review $CONFIG_PATH for local customisations (metrics port, tracing, etc.) before restart." $orange
     if [ "$NODE_TYPE" == 'producer' ]; then
         print 'INSTALL' "Producer also uses $NETWORK_PATH/config-bp.json — check both config files." $orange
     fi
@@ -350,14 +374,14 @@ install_prometheus_exporter() {
             _install_fail 'Please supply your monitoring node IP address' || return 1
         fi
         sudo ufw allow proto tcp from $monitoringIp to any port 9100 || _install_fail 'Could not configure ufw for port 9100' || return 1
-        sudo ufw allow proto tcp from $monitoringIp to any port $PROMETHEUS_CARDANO_PORT || _install_fail "Could not configure ufw for port $PROMETHEUS_CARDANO_PORT" || return 1
+        sudo ufw allow proto tcp from $monitoringIp to any port $NODE_METRICS_PORT || _install_fail "Could not configure ufw for port $NODE_METRICS_PORT" || return 1
         sudo ufw reload || _install_fail 'Could not reload ufw' || return 1
     fi
     sudo $PACKAGER install -y prometheus-node-exporter || _install_fail 'Could not install prometheus-node-exporter' || return 1
 
     sudo sed -i "/^ExecStart=/c\\ExecStart=$promPath --collector.textfile.directory=$NETWORK_PATH/stats --collector.textfile" "$servicePath" || \
         _install_fail 'Could not configure prometheus-node-exporter service' || return 1
-    _apply_prometheus_config "$CONFIG_PATH" || return 1
+    _apply_node_metrics_config "$CONFIG_PATH" || return 1
 
     sudo systemctl enable prometheus-node-exporter.service || _install_fail 'Could not enable prometheus-node-exporter service' || return 1
     sudo systemctl restart prometheus-node-exporter.service || _install_fail 'Could not restart prometheus-node-exporter service' || return 1
@@ -379,7 +403,9 @@ install_grafana() {
     sudo grafana-cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
 
     serviceDir="$SERVICES_SOURCE"
-    sudo cp -p "$serviceDir/prometheus.yml" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
+    _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
+    sudo cp -p "$serviceDir/prometheus.yml.temp" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
+    rm -f "$serviceDir/prometheus.yml.temp" || _install_fail 'Could not remove temporary prometheus.yml' || return 1
 
     sudo sed -i "/# disable user signup \/ registration/{n;s/.*/allow_sign_up = false/}" "/etc/grafana/grafana.ini" || \
         _install_fail 'Could not configure grafana.ini' || return 1

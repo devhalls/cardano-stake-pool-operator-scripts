@@ -30,12 +30,24 @@ services:
         image: prom/prometheus:latest
         container_name: prometheus
         restart: unless-stopped
+        env_file:
+            - ./../env.docker
         volumes:
-            - "./config.prometheus.yml:/etc/prometheus/prometheus.yml"
+            - "./config.prometheus.yml:/etc/prometheus/prometheus.yml.in:ro"
         ports:
-            - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+            - "${PROMETHEUS_SCRAPER_PORT}:${PROMETHEUS_SCRAPER_PORT}"
         networks:
             - dapp_network
+        entrypoint: [ "/bin/sh", "-c" ]
+        command:
+            - |
+              sed \
+                -e "s|__NODE_METRICS_PORT__|$${NODE_METRICS_PORT}|g" \
+                -e "s|__PROMETHEUS_SCRAPER_PORT__|$${PROMETHEUS_SCRAPER_PORT}|g" \
+                /etc/prometheus/prometheus.yml.in > /tmp/prometheus.yml
+              exec /bin/prometheus \
+                --config.file=/tmp/prometheus.yml \
+                --web.listen-address=:$${PROMETHEUS_SCRAPER_PORT}
     grafana:
         image: grafana/grafana:latest
         container_name: grafana
