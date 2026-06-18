@@ -56,5 +56,10 @@ scripts/dbsync.sh watch
 scripts/dbsync.sh status
 ```
 
+### Migrating to another device
+
+To move a synced instance to a new machine without re-importing an IOG snapshot, see
+[Cardano DBSync migration](08-cardano-dbsync-migration.md).
+
 ---
 

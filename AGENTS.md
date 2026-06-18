@@ -42,6 +42,7 @@ env (+ env.docker in Docker)
 | [docs/deployment/03-cardano-dbsync-installation.md](docs/deployment/03-cardano-dbsync-installation.md) | Postgres + db-sync |
 | [docs/deployment/04-midnight-installation.md](docs/deployment/04-midnight-installation.md) | Partner-chain Docker (separate `midnight/` tree when present) |
 | [docs/deployment/06-docker-installation.md](docs/deployment/06-docker-installation.md) | Local Docker workflow |
+| [docs/deployment/08-cardano-dbsync-migration.md](docs/deployment/08-cardano-dbsync-migration.md) | Move db-sync to another host |
 | [docs/registration/01-registering-stake-pool.md](docs/registration/01-registering-stake-pool.md) | Pool registration |
 | [docs/registration/02-managing-stake-pool.md](docs/registration/02-managing-stake-pool.md) | Ops, KES, governance, retirement |
 | [docs/registration/03-registering-drep.md](docs/registration/03-registering-drep.md) | DRep |
