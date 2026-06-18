@@ -6,7 +6,7 @@ Bash toolkit for **Cardano Stake Pool Operators**: install and run nodes, option
 
 | Area | Purpose |
 |------|---------|
-| `scripts/*.sh` | Production CLI entry points (`address`, `query`, `pool`, `tx`, `govern`, `node`, `dbsync`, `network`, `midnight`) |
+| `scripts/*.sh` | Production CLI entry points (`address`, `query`, `pool`, `tx`, `govern`, `node`, `dbsync`, `ogmios`, `network`, `midnight`) |
 | `scripts/node/` | Build, download, install, update, mithril, icebreaker helpers |
 | `scripts/test/` | Smoke + integration test harness (`test.sh`); release manifests under `releases/` |
 | `configs/node/<version>/<network>/` | Pinned node config bundles (e.g. `11.0.1` × `mainnet` / `preview` / `preprod` / `sanchonet`) |
@@ -29,7 +29,7 @@ env (+ env.docker in Docker)
 - **Networks:** `mainnet`, `preprod`, `preview`, `sanchonet` (magic in `NETWORK_ARG`).
 - **Node types:** `relay`, `producer`, `cold` — cold/producer split for key safety; many `tx`/`pool` steps assume copy-between-machines workflow documented in `docs/`.
 - **Binaries:** `NODE_BUILD` `0` = none, `1` = download from IntersectMBO releases, `2` = build from source (`scripts/node/build.sh`, GHC/Cabal from env).
-- **Optional stack:** db-sync, mithril signer/relay, ngrok, BlockFrost icebreaker, prometheus/grafana — gated by env vars and `*.services.manifest`.
+- **Optional stack:** db-sync, ogmios, mithril signer/relay, ngrok, BlockFrost icebreaker, prometheus/grafana — gated by env vars and `*.services.manifest` (native systemd); Docker stack runs node, db-sync, ogmios, postgres, prometheus, grafana by default.
 
 ## Documentation map
 
@@ -40,6 +40,7 @@ env (+ env.docker in Docker)
 | [docs/deployment/01-cardano-node-installation.md](docs/deployment/01-cardano-node-installation.md) | Env table, install, firewall |
 | [docs/deployment/02-mithril-installation.md](docs/deployment/02-mithril-installation.md) | Mithril signer/relay |
 | [docs/deployment/03-cardano-dbsync-installation.md](docs/deployment/03-cardano-dbsync-installation.md) | Postgres + db-sync |
+| [docs/deployment/07-cardano-ogmios-installation.md](docs/deployment/07-cardano-ogmios-installation.md) | Ogmios bridge (CardanoSolutions releases) |
 | [docs/deployment/04-midnight-installation.md](docs/deployment/04-midnight-installation.md) | Partner-chain Docker (separate `midnight/` tree when present) |
 | [docs/deployment/06-docker-installation.md](docs/deployment/06-docker-installation.md) | Local Docker workflow |
 | [docs/registration/01-registering-stake-pool.md](docs/registration/01-registering-stake-pool.md) | Pool registration |
@@ -115,3 +116,4 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 | Governance | `docs/registration/03-registering-drep.md`, `scripts/govern.sh` |
 | Tests / CI | `docs/TESTS.md`, `scripts/test/lib.sh` |
 | Docker dev | `docs/deployment/06-docker-installation.md`, `docker/docker-compose.yaml` |
+| Ogmios | `docs/deployment/07-cardano-ogmios-installation.md`, `scripts/ogmios.sh` |

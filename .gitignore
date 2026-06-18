@@ -10,5 +10,6 @@ metadata
 docker/node
 docker/postgres
 docker/db-sync
+docker/ogmios
 docker/bin
 node_modules

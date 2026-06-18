@@ -443,6 +443,37 @@ dbsync_release_filenames() {
     esac
 }
 
+ogmios_release_filenames() {
+    local version="$OGMIOS_VERSION"
+    local os=$(platform)
+    local arch=$(platform_arch)
+
+    case "$os" in
+        linux)
+            if [[ "$arch" == "amd64" ]]; then
+                echo "ogmios-v${version}-x86_64-linux.zip"
+            elif [[ "$arch" == "arm64" ]]; then
+                echo "ogmios-v${version}-aarch64-linux.zip"
+            else
+                print 'ERROR' "Unsupported linux arch for ogmios: $arch" $red
+                return 1
+            fi
+            ;;
+        macos)
+            if [[ "$arch" == "arm64" ]]; then
+                echo "ogmios-v${version}-aarch64-macos.zip"
+            else
+                print 'ERROR' "Unsupported macos arch for ogmios: $arch" $red
+                return 1
+            fi
+            ;;
+        *)
+            print 'ERROR' "Unsupported platform for ogmios: $os" $red
+            return 1
+            ;;
+    esac
+}
+
 remove_path() {
     [ $# -gt 0 ] || return 0
     command rm -rf "$@"

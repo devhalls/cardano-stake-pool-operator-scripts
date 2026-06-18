@@ -9,6 +9,7 @@
 4. [Midnight Node installation](deployment/04-midnight-installation.md)
 5. [Midnight DBSync installation](deployment/05-midnight-dbsync-installation.md)
 6. [Local Docker](deployment/06-docker-installation.md)
+7. [Cardano Ogmios installation](deployment/07-cardano-ogmios-installation.md)
 
 **Registration**
 1. [Registering a Stake Pool](registration/01-registering-stake-pool.md)
@@ -34,7 +35,8 @@ docs/
 │   ├── 03-cardano-dbsync-installation.md
 │   ├── 04-midnight-installation.md
 │   ├── 05-midnight-dbsync-installation.md
-│   └── 06-docker-installation.md
+│   ├── 06-docker-installation.md
+│   └── 07-cardano-ogmios-installation.md
 └── registration/
     ├── 01-registering-stake-pool.md
     ├── 02-managing-stake-pool.md
@@ -56,6 +58,7 @@ scripts/dbync.sh help
 scripts/govern.sh help
 scripts/network.sh help
 scripts/node.sh help
+scripts/ogmios.sh help
 scripts/pool.sh help
 scripts/query.sh help
 scripts/tx.sh help

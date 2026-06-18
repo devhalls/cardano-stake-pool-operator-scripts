@@ -6,6 +6,7 @@
 #   midnight [...params<MIXED>] |
 #   network [...params<MIXED>] |
 #   node [...params<MIXED>] |
+#   ogmios [...params<MIXED>] |
 #   pool [...params<MIXED>] |
 #   query [...params<MIXED>] |
 #   tx [...params<MIXED>] |
@@ -21,6 +22,7 @@
 #   - midnight)
 #   - network)
 #   - node)
+#   - ogmios)
 #   - pool)
 #   - query)
 #   - tx)
@@ -36,6 +38,7 @@ case $1 in
     midnight) bash $(dirname "$0")/scripts/midnight.sh "${@:2}" ;;
     network) bash $(dirname "$0")/scripts/network.sh "${@:2}" ;;
     node) bash $(dirname "$0")/scripts/node.sh "${@:2}" ;;
+    ogmios) bash $(dirname "$0")/scripts/ogmios.sh "${@:2}" ;;
     pool) bash $(dirname "$0")/scripts/pool.sh "${@:2}" ;;
     query) bash $(dirname "$0")/scripts/query.sh "${@:2}" ;;
     tx) bash $(dirname "$0")/scripts/tx.sh "${@:2}" ;;

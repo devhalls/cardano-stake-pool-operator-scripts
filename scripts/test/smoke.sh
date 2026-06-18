@@ -15,6 +15,7 @@ run_suite_smoke() {
     run_test smoke_help_govern test_smoke_help_govern
     run_test smoke_help_node test_smoke_help_node
     run_test smoke_help_dbsync test_smoke_help_dbsync
+    run_test smoke_help_ogmios test_smoke_help_ogmios
     run_test smoke_help_network test_smoke_help_network
     run_test smoke_help_midnight test_smoke_help_midnight
     run_test smoke_help_node_install test_smoke_help_node_install
@@ -36,6 +37,7 @@ list_suite_smoke() {
     echo "  smoke_help_govern"
     echo "  smoke_help_node"
     echo "  smoke_help_dbsync"
+    echo "  smoke_help_ogmios"
     echo "  smoke_help_network"
     echo "  smoke_help_midnight"
     echo "  smoke_help_node_install"
@@ -79,6 +81,7 @@ test_smoke_help_tx() { assert_help tx.sh; }
 test_smoke_help_govern() { assert_help govern.sh; }
 test_smoke_help_node() { assert_help node.sh; }
 test_smoke_help_dbsync() { assert_help dbsync.sh; }
+test_smoke_help_ogmios() { assert_help ogmios.sh; }
 test_smoke_help_network() { assert_help network.sh; }
 test_smoke_help_midnight() { assert_help midnight.sh; }
 

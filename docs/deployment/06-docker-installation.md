@@ -51,6 +51,16 @@ docker exec -it node bash
 
 See [Integration and smoke tests](../TESTS.md) for smoke/integration coverage and generated test output. Wallet and pool setup use `./docker/fixture.sh`, not `test.sh`.
 
+The stack includes **ogmios** (`cardanosolutions/ogmios`) alongside node, db-sync, and postgres. It starts with `./docker/run.sh up -d` and connects to the node socket on the shared IPC volume.
+
+```shell
+curl -s "localhost:${OGMIOS_PORT:-1337}/health" | jq '.'
+docker logs -f --tail 100 ogmios
+./docker/run.sh restart ogmios
+```
+
+See [Cardano Ogmios installation](07-cardano-ogmios-installation.md) for native install and version pins.
+
 ### Managing the containers
 
 ```shell
@@ -70,7 +80,7 @@ See [Integration and smoke tests](../TESTS.md) for smoke/integration coverage an
 ./docker/run.sh down -v       # also remove named volumes (socket, grafana data)
 ```
 
-Bind-mounted data under `docker/node`, `docker/postgres`, and `docker/db-sync` is kept unless you delete those directories yourself.
+Bind-mounted data under `docker/node`, `docker/postgres`, `docker/db-sync`, and `docker/ogmios` is kept unless you delete those directories yourself.
 
 ### Missing or outdated configs
 

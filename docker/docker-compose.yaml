@@ -100,6 +100,28 @@ services:
         ]
         networks:
             - dapp_network
+    ogmios:
+        image: ${OGMIOS_DOCKER_IMAGE}
+        container_name: ogmios
+        depends_on:
+            - node
+        restart: unless-stopped
+        environment:
+            - DATA_DIR=/data
+        ports:
+            - "${OGMIOS_PORT}:${OGMIOS_PORT}"
+        volumes:
+            - "./ogmios:/data"
+            - "./node:/node"
+            - cardano_ipc:/ipc
+        command: [
+            "--node-socket", "/ipc/node.socket",
+            "--node-config", "/node/cardano-node/config.json",
+            "--host", "0.0.0.0",
+            "--port", "${OGMIOS_PORT}",
+        ]
+        networks:
+            - dapp_network
 
 networks:
     dapp_network:
