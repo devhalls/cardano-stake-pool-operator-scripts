@@ -26,7 +26,8 @@
 #   - configs) Sync node config files from the repo (overwrites bundled files; prompts for topology).
 #   - guild) Download the guild gLiveView script.
 #   - prometheus_exporter) Install Prometheus node exporter on the block producers and all relays. The monitoringIp is only used for producer nodes.
-#   - grafana) Install Grafana on Monitoring Node only - must be a relay.
+#   - grafana) Install or re-apply Grafana, Prometheus scraper, plugins, and
+#     datasource provisioning. Safe to re-run on a relay or a producer that hosts Grafana.
 #   - service) Create the node systemctl service.
 #   - clean) Clean the installation and remove all files.
 #   - help) View this files help. Default value if no option is passed.
@@ -271,6 +272,16 @@ _render_prometheus_yml() {
     return 0
 }
 
+_render_grafana_datasources() {
+    local src="$1"
+    local dest="$2"
+    sed \
+        -e "s|__PROMETHEUS_SCRAPER_HOST__|${PROMETHEUS_SCRAPER_HOST}|g" \
+        -e "s|__PROMETHEUS_SCRAPER_PORT__|${PROMETHEUS_SCRAPER_PORT}|g" \
+        "$src" >"$dest" || _install_fail 'Could not render grafana-datasources.yml' || return 1
+    return 0
+}
+
 _sync_node_configs() {
     _require_warm_node || return 1
     if [ ! -d "$CONFIG_SOURCE" ]; then
@@ -390,7 +401,7 @@ install_prometheus_exporter() {
 }
 
 install_grafana() {
-    _require_relay_node || return 1
+    _require_warm_node || return 1
     print 'INSTALL' 'Grafana dashboard'
 
     wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add - || _install_fail 'Could not add Grafana GPG key' || return 1
@@ -404,8 +415,25 @@ install_grafana() {
 
     serviceDir="$SERVICES_SOURCE"
     _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
-    sudo cp -p "$serviceDir/prometheus.yml.temp" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
-    rm -f "$serviceDir/prometheus.yml.temp" || _install_fail 'Could not remove temporary prometheus.yml' || return 1
+    if [ -f /etc/prometheus/prometheus.yml ]; then
+        print 'INSTALL' 'Leaving existing /etc/prometheus/prometheus.yml in place' $orange
+        rm -f "$serviceDir/prometheus.yml.temp" || _install_fail 'Could not remove temporary prometheus.yml' || return 1
+    else
+        sudo cp -p "$serviceDir/prometheus.yml.temp" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
+        rm -f "$serviceDir/prometheus.yml.temp" || _install_fail 'Could not remove temporary prometheus.yml' || return 1
+    fi
+
+    sudo mkdir -p /etc/grafana/provisioning/datasources /usr/share/grafana || \
+        _install_fail 'Could not create Grafana provisioning directories' || return 1
+    _render_grafana_datasources "$serviceDir/grafana-datasources.yml" "$serviceDir/grafana-datasources.yml.temp" || return 1
+    sudo cp -p "$serviceDir/grafana-datasources.yml.temp" /etc/grafana/provisioning/datasources/spo.yml || \
+        _install_fail 'Could not copy Grafana datasource provisioning' || return 1
+    rm -f "$serviceDir/grafana-datasources.yml.temp" || _install_fail 'Could not remove temporary grafana-datasources.yml' || return 1
+    if [ ! -f /usr/share/grafana/slots.csv ]; then
+        echo 'Time,Slot,No,Epoch' | sudo tee /usr/share/grafana/slots.csv >/dev/null || \
+            _install_fail 'Could not create slots.csv' || return 1
+        sudo chmod 644 /usr/share/grafana/slots.csv || _install_fail 'Could not set slots.csv permissions' || return 1
+    fi
 
     sudo sed -i "/# disable user signup \/ registration/{n;s/.*/allow_sign_up = false/}" "/etc/grafana/grafana.ini" || \
         _install_fail 'Could not configure grafana.ini' || return 1

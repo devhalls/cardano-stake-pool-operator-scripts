@@ -84,7 +84,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {},
@@ -156,7 +157,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -233,7 +235,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "fe8du3r69is5cf"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "cardano_node_metrics_blockNum_int{alias=\"block-producer-node\"}",
@@ -246,7 +248,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "fe8du3r69is5cf"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "cardano_node_metrics_slotNum_int{alias=\"block-producer-node\"}",
@@ -262,7 +264,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Slot height in current epoch (taken from Core node)",
       "fieldConfig": {
@@ -339,7 +342,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -433,7 +437,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Remaining KES DAYS before we need to rotate keys",
       "fieldConfig": {
@@ -523,7 +528,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -585,11 +591,12 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "(cardano_node_metrics_Forge_node_not_leader_int{alias=\"block-producer-node\"} + cardano_node_metrics_Forge_adopted_int{alias=\"block-producer-node\"}) / cardano_node_metrics_Forge_forge_about_to_lead_int{alias=\"block-producer-node\"} * 100",
+          "expr": "((cardano_node_metrics_Forge_node_not_leader_counter{alias=\"block-producer-node\"} or cardano_node_metrics_Forge_node_not_leader_int{alias=\"block-producer-node\"}) + (cardano_node_metrics_Forge_adopted_counter{alias=\"block-producer-node\"} or cardano_node_metrics_Forge_adopted_int{alias=\"block-producer-node\"})) / (cardano_node_metrics_Forge_about_to_lead_counter{alias=\"block-producer-node\"} or cardano_node_metrics_Forge_forge_about_to_lead_int{alias=\"block-producer-node\"}) * 100",
           "hide": false,
           "interval": "",
           "legendFormat": "{{none}}",
@@ -602,7 +609,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Retrieved from external API data source",
       "fieldConfig": {
@@ -649,7 +657,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -665,7 +674,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Retrieved from external API data source",
       "fieldConfig": {
@@ -722,7 +732,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -738,7 +749,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Retrieved from external API data source",
       "fieldConfig": {
@@ -773,7 +785,7 @@
       "id": 156,
       "options": {
         "colorMode": "background",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
@@ -793,13 +805,14 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
           "expr": "data_poolBlockCount{alias=\"block-producer-node\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
@@ -809,15 +822,17 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Retrieved from external API data source",
+      "description": "Forged blocks since last restart",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -841,10 +856,10 @@
         "x": 12,
         "y": 5
       },
-      "id": 186,
+      "id": 181,
       "options": {
         "colorMode": "background",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
@@ -864,13 +879,14 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_blocksForged_int{alias=\"block-producer-node\"}",
+          "expr": "cardano_node_metrics_Forge_adopted_counter{alias=\"block-producer-node\"} or cardano_node_metrics_Forge_adopted_int{alias=\"block-producer-node\"} or cardano_node_metrics_blocksForged_int{alias=\"block-producer-node\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
@@ -880,7 +896,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Retrieved from external API data source",
       "fieldConfig": {
@@ -928,7 +945,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -944,7 +962,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Snapshot of stake taken 2 epochs ago used for reward calculation in the current epoch",
       "fieldConfig": {
@@ -1005,7 +1024,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1021,7 +1041,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Retrieved from external API data source",
       "fieldConfig": {
@@ -1083,7 +1104,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1096,7 +1118,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "round(data_poolLivePledge{alias=\"block-producer-node\"}/1000000)",
@@ -1109,7 +1131,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "round(data_poolFixedCost{alias=\"block-producer-node\"}/1000000)",
@@ -1122,7 +1144,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1242,22 +1264,18 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
+            "uid": "${DS_PROMETHEUS}"
           },
-          "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "cardano_node_metrics_slotNum_int{alias=\"relay-node-1\"}   ",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
+          "expr": "cardano_node_metrics_slotNum_int{alias=\"block-producer-node\"}",
           "legendFormat": "Slot",
           "range": true,
-          "refId": "A",
-          "useBackend": false
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "marcusolsson-csv-datasource",
-            "uid": "fe92yrclgk64gc"
+            "uid": "${DS_CSV}"
           },
           "decimalSeparator": ".",
           "delimiter": ",",
@@ -1299,7 +1317,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -1352,7 +1371,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1368,7 +1388,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -1458,7 +1479,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1645,7 +1667,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -1756,7 +1779,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -1781,16 +1805,16 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 1
-              },
-              {
                 "color": "green",
                 "value": 2
               },
               {
+                "color": "semi-dark-green",
+                "value": 8
+              },
+              {
                 "color": "dark-green",
-                "value": 20
+                "value": 12
               }
             ]
           },
@@ -1828,32 +1852,19 @@
       "targets": [
         {
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": true,
-          "expr": "cardano_node_metrics_connectionManager_inboundConns_int{alias=\"$relays\"}",
+          "expr": "cardano_node_metrics_connectionManager_inboundConns_int{alias=\"$relays\"} or cardano_node_metrics_connectionManager_incomingConns{alias=\"$relays\"}",
           "format": "time_series",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Inbound",
+          "legendFormat": "Relay1",
           "refId": "A",
           "step": 20,
           "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
-          },
-          "editorMode": "code",
-          "expr": "cardano_node_metrics_peerSelection_ActivePeers_int{alias=\"$relays\"}",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "Active",
-          "range": true,
-          "refId": "B"
         }
       ],
       "title": "Peers",
@@ -1861,7 +1872,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -1927,7 +1939,7 @@
         {
           "editorMode": "code",
           "exemplar": true,
-          "expr": "cardano_node_metrics_txsProcessedNum_counter{alias=\"$relays\"}",
+          "expr": "cardano_node_metrics_txsProcessedNum_counter{alias=\"$relays\"} or cardano_node_metrics_txsProcessedNum_int{alias=\"$relays\"}",
           "hide": false,
           "instant": true,
           "interval": "",
@@ -1944,7 +1956,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 23
       },
       "id": 178,
       "panels": [],
@@ -1953,7 +1965,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "current",
       "fieldConfig": {
@@ -2018,7 +2031,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 40
+        "y": 24
       },
       "id": 59,
       "options": {
@@ -2054,7 +2067,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2118,7 +2132,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 40
+        "y": 24
       },
       "id": 28,
       "options": {
@@ -2154,7 +2168,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2217,7 +2232,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 48
+        "y": 32
       },
       "id": 18,
       "options": {
@@ -2253,7 +2268,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -2317,7 +2333,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 48
+        "y": 32
       },
       "id": 97,
       "options": {
@@ -2339,7 +2355,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -2355,7 +2372,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2418,7 +2436,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 48
+        "y": 32
       },
       "id": 80,
       "options": {
@@ -2458,7 +2476,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 40
       },
       "id": 176,
       "panels": [],
@@ -2467,7 +2485,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "1 hour rolling window",
       "fieldConfig": {
@@ -2532,7 +2551,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 41
       },
       "id": 63,
       "options": {
@@ -2555,7 +2574,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "rate(node_network_receive_bytes_total{alias=~\"$relays\"}[1h]) * 3600",
@@ -2572,7 +2591,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "ae8zae77gagw0b"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2620,8 +2639,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2636,7 +2654,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 67
+        "y": 51
       },
       "id": 177,
       "options": {
@@ -2660,7 +2678,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ae8zae77gagw0b"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -2677,7 +2695,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Counts only memory that is physically free (from OS, in MBytes)",
       "fieldConfig": {
@@ -2725,8 +2744,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2742,7 +2760,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 67
+        "y": 51
       },
       "id": 135,
       "options": {
@@ -2778,7 +2796,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -2825,8 +2844,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2842,7 +2860,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 73
+        "y": 57
       },
       "id": 37,
       "options": {
@@ -2878,7 +2896,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Amount of live data, MBytes",
       "fieldConfig": {
@@ -2925,8 +2944,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2942,7 +2960,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 73
+        "y": 57
       },
       "id": 32,
       "options": {
@@ -2978,7 +2996,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -3025,8 +3044,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3042,7 +3060,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 79
+        "y": 63
       },
       "id": 64,
       "options": {
@@ -3078,7 +3096,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -3126,8 +3145,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3143,7 +3161,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 79
+        "y": 63
       },
       "id": 30,
       "options": {
@@ -3183,7 +3201,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 85
+        "y": 69
       },
       "id": 180,
       "panels": [],
@@ -3192,7 +3210,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "",
       "fieldConfig": {
@@ -3239,8 +3258,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3401,7 +3419,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 70
       },
       "id": 94,
       "options": {
@@ -3478,8 +3496,44 @@
     "list": [
       {
         "current": {
+          "text": "Prometheus",
+          "value": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "CSV",
+          "value": "csv-slots"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "CSV",
+        "multi": false,
+        "name": "DS_CSV",
+        "options": [],
+        "query": "marcusolsson-csv-datasource",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {
           "text": "All",
           "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values(alias)",
         "hide": 2,
@@ -3500,7 +3554,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
@@ -3517,8 +3571,8 @@
     ]
   },
   "timezone": "",
-  "title": "Cardano SPO - Mainnet",
+  "title": "Cardano SPO - Dashboard",
   "uid": "CardanoNodeDashboard24",
-  "version": 69,
+  "version": 16,
   "weekStart": ""
 }

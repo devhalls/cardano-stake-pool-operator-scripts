@@ -334,12 +334,12 @@ node_restart_prom() {
 }
 
 node_watch_prom() {
-    _require_relay_node || return 1
+    _require_warm_node || return 1
     journalctl --system -u "$PROMETHEUS_SCRAPER_SERVICE" --follow
 }
 
 node_status_prom() {
-    _require_relay_node || return 1
+    _require_warm_node || return 1
     sudo systemctl status "$PROMETHEUS_SCRAPER_SERVICE"
 }
 
@@ -354,7 +354,7 @@ node_status_prom_ex() {
 }
 
 node_restart_grafana() {
-    _require_relay_node || return 1
+    _require_warm_node || return 1
     _require_systemctl || return 1
     sudo systemctl restart "$GRAFANA_SERVICE" || _node_fail 'Could not restart grafana service' || return 1
     print 'NODE' "Grafana service restarted" $green
@@ -362,12 +362,12 @@ node_restart_grafana() {
 }
 
 node_watch_grafana() {
-    _require_relay_node || return 1
+    _require_warm_node || return 1
     journalctl --system -u "$GRAFANA_SERVICE" --follow
 }
 
 node_status_grafana() {
-    _require_relay_node || return 1
+    _require_warm_node || return 1
     sudo systemctl status "$GRAFANA_SERVICE"
 }
 

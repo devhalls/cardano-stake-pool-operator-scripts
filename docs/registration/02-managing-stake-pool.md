@@ -72,7 +72,9 @@ packages and configs, restart your nodes, and you can visit the dashboard.
 # ALL NODES: Install prometheus explorer on all nodes
 scripts/node.sh install prometheus_explorer
 
-# MONITOR: Install grafana on the monitoring node only
+# MONITOR (or a testnet producer that also hosts Grafana): install / re-run to
+# provision Prometheus (uid: prometheus) and CSV (uid: csv-slots). Safe to repeat;
+# existing /etc/prometheus/prometheus.yml is left in place.
 scripts/node.sh install grafana
 
 # ALL NODES: Check the service status
