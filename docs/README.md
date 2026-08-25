@@ -1,6 +1,6 @@
 # Documentation
 
-**Full docs index** · [Integration and smoke tests](TESTS.md) · [AI / agent guide](../AGENTS.md)
+**Full docs index** · [Integration and smoke tests](TESTS.md) · [GitHub releases](RELEASES.md) · [AI / agent guide](../AGENTS.md)
 
 **Deployment**
 1. [Cardano Node installation](deployment/01-cardano-node-installation.md)
@@ -30,6 +30,7 @@ Operate Cardano nodes using easy to understand environment configurations. We di
 docs/
 ├── README.md
 ├── TESTS.md
+├── RELEASES.md
 ├── deployment/
 │   ├── 01-cardano-node-installation.md
 │   ├── 02-mithril-installation.md

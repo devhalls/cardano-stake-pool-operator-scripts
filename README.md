@@ -25,6 +25,7 @@ tree --filesfirst -L 3
 ├── docs
 │   ├── README.md
 │   ├── TESTS.md
+│   ├── RELEASES.md
 │   ├── deployment
 │   │   ├── 01-cardano-node-installation.md
 │   │   ├── 02-mithril-installation.md
@@ -140,6 +141,7 @@ We divide our workflow in two main branches; **deployment**, covering node depen
 
 - [Full docs index](docs/README.md)
 - [Integration and smoke tests](docs/TESTS.md)
+- [GitHub releases](docs/RELEASES.md)
 - [AI / agent guide](AGENTS.md) (for Cursor, Copilot, and other assistants)
 
 ---

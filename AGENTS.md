@@ -87,7 +87,7 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 2. **Env changes:** Update `env.example`, `env.docker`, and `scripts/test/releases/<version>.manifest` (and `.docker.manifest` if Docker-only pins). Run smoke.
 3. **New config file per network:** Add to `configs/node/<version>/<network>/` and `*.configs.manifest`.
 4. **New systemd template:** Add to `configs/services/` and `*.services.manifest` with correct `SERVICE` / substitution vars.
-5. **Version bump:** Copy all release manifests; update pins, schema head, build flake pins; see `scripts/test/releases/README.md`.
+5. **Version bump:** Copy all release manifests; update pins, schema head, build flake pins; see `scripts/test/releases/README.md`. GitHub toolkit tags (`v1.0.x`) are documented in [docs/RELEASES.md](docs/RELEASES.md).
 6. **Minimal diffs:** No drive-by refactors; this repo favors explicit shell over heavy abstraction.
 7. **Secrets:** Never commit `env`, keys under `$NETWORK_PATH/keys`, or API tokens.
 

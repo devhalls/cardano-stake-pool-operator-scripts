@@ -162,7 +162,7 @@ When you change a **release** (node, db-sync, mithril, schema, or env layout):
 5. **`scripts/test/releases/<version>.configs.manifest`** — `NETWORK` / `FILE` lines for each network bundle.
 6. **`scripts/test/releases/<version>.build.manifest`** — GHC/Cabal and flake.lock lib pins; re-resolve after bumping `NODE_VERSION`.
 7. **`configs/node/<version>/<network>/`** — files listed in the configs manifest.
-8. Run **`./docker/script.sh test.sh smoke`** before tagging; use **`--report`** to refresh generated results below.
+8. Run **`./docker/script.sh test.sh smoke`** before tagging; use **`--report`** to refresh generated results below. How to cut the GitHub tag is in [RELEASES.md](RELEASES.md).
 
 Adding a new release (e.g. `12.0.0`): copy all five manifest files from the previous version, update pins and schema head, then run smoke with `--release 12.0.0`.
 
