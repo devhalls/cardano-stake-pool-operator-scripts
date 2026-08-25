@@ -1,20 +1,12 @@
 apiVersion: 1
 
-# Stable UIDs so grafana-node-dashboard.json can use ${DS_PROMETHEUS} / ${DS_CSV}
-# on every host. Grafana creates these on start; existing datasources with the
-# same uid are updated, not duplicated.
+# Grafana 13 exits if a provisioned uid does not match grafana.db
+# (https://github.com/grafana/grafana/issues/110740). Match by name only.
+# CSV is not provisioned: a missing plugin type is also fatal on 13.
 datasources:
   - name: Prometheus
     type: prometheus
-    uid: prometheus
     access: proxy
     url: http://__PROMETHEUS_SCRAPER_HOST__:__PROMETHEUS_SCRAPER_PORT__
     isDefault: true
-    editable: true
-
-  - name: CSV
-    type: marcusolsson-csv-datasource
-    uid: csv-slots
-    access: proxy
-    url: file:///usr/share/grafana/slots.csv
     editable: true
