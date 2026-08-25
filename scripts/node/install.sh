@@ -282,6 +282,28 @@ _render_grafana_datasources() {
     return 0
 }
 
+_grafana_cli() {
+    local homepath=/usr/share/grafana
+    local plugins_dir=/var/lib/grafana/plugins
+    if command -v grafana >/dev/null 2>&1; then
+        sudo grafana cli --homepath "$homepath" --pluginsDir "$plugins_dir" "$@"
+    else
+        sudo grafana-cli --homepath "$homepath" --pluginsDir "$plugins_dir" "$@"
+    fi
+}
+
+_install_grafana_plugin() {
+    local plugin="$1"
+    if _grafana_cli plugins install "$plugin"; then
+        return 0
+    fi
+    if [ -d "/var/lib/grafana/plugins/${plugin}" ]; then
+        print 'INSTALL' "Grafana plugin already present: $plugin" $orange
+        return 0
+    fi
+    _install_fail "Could not install $plugin plugin" || return 1
+}
+
 _sync_node_configs() {
     _require_warm_node || return 1
     if [ ! -d "$CONFIG_SOURCE" ]; then
@@ -404,14 +426,18 @@ install_grafana() {
     _require_warm_node || return 1
     print 'INSTALL' 'Grafana dashboard'
 
-    wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add - || _install_fail 'Could not add Grafana GPG key' || return 1
-    echo "deb https://packages.grafana.com/oss/deb stable main" >grafana.list
-    sudo mv grafana.list /etc/apt/sources.list.d/grafana.list || _install_fail 'Could not configure Grafana apt source' || return 1
-    sudo $PACKAGER update && sudo $PACKAGER install -y prometheus grafana || _install_fail 'Could not install Grafana and Prometheus packages' || return 1
+    if dpkg -s grafana >/dev/null 2>&1 && dpkg -s prometheus >/dev/null 2>&1; then
+        print 'INSTALL' 'Grafana and Prometheus packages already installed'
+    else
+        wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add - || _install_fail 'Could not add Grafana GPG key' || return 1
+        echo "deb https://packages.grafana.com/oss/deb stable main" >grafana.list
+        sudo mv grafana.list /etc/apt/sources.list.d/grafana.list || _install_fail 'Could not configure Grafana apt source' || return 1
+        sudo $PACKAGER update && sudo $PACKAGER install -y prometheus grafana || _install_fail 'Could not install Grafana and Prometheus packages' || return 1
+    fi
 
     source ~/.bashrc
-    sudo grafana-cli plugins install grafana-clock-panel || _install_fail 'Could not install grafana-clock-panel plugin' || return 1
-    sudo grafana-cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
+    _install_grafana_plugin grafana-clock-panel || return 1
+    _install_grafana_plugin marcusolsson-csv-datasource || return 1
 
     serviceDir="$SERVICES_SOURCE"
     _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
