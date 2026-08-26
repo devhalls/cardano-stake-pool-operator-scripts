@@ -6,7 +6,7 @@ datasources:
     uid: prometheus
     access: proxy
     url: http://__PROMETHEUS_SCRAPER_HOST__:__PROMETHEUS_SCRAPER_PORT__
-    isDefault: true
+    isDefault: false
     editable: true
 
   - name: CSV
