@@ -64,6 +64,24 @@ _require_file() {
     fi
 }
 
+_copy_slots_csv_to_grafana() {
+    local csvFile="$1"
+    local dest=/usr/share/grafana/slots.csv
+    [ -d /usr/share/grafana ] || return 0
+
+    if [ -w "$dest" ] || { [ ! -e "$dest" ] && [ -w /usr/share/grafana ]; }; then
+        cp "$csvFile" "$dest" || _query_fail 'Could not copy slots CSV to grafana' || return 1
+        return 0
+    fi
+
+    if sudo -n cp "$csvFile" "$dest" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    print 'QUERY' "Could not copy $csvFile to $dest without a sudo password. Run once: sudo chown $NODE_USER:grafana $dest && sudo chmod 664 $dest"
+    return 0
+}
+
 # Public functions
 
 query_tip() {
@@ -228,7 +246,6 @@ query_leader() {
     local outputPath=$NETWORK_PATH/logs
     local tempFilePath=$outputPath/$targetEpoch.txt
     local csvFile=$outputPath/slots.csv
-    local grafanaLocation=/usr/share/grafana
     local poolId=$(<$POOL_ID)
 
     print 'QUERY' "Leadership schedule starting, please wait..."
@@ -270,9 +287,7 @@ query_leader() {
     done <<< "$content"
 
     echo "$content"
-    if [ -d "$grafanaLocation" ]; then
-        sudo cp "$csvFile" "$grafanaLocation/slots.csv" || _query_fail 'Could not copy slots CSV to grafana' || return 1
-    fi
+    _copy_slots_csv_to_grafana "$csvFile" || return 1
     return 0
 }
 

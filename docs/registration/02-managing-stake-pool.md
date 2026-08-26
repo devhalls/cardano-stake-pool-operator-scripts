@@ -3,6 +3,7 @@
 [Full docs index](../README.md) · [Integration and smoke tests](../TESTS.md) · [AI / agent guide](../../AGENTS.md)
 
 **Deployment**
+
 1. [Cardano Node installation](../deployment/01-cardano-node-installation.md)
 2. [Mithril Node installation](../deployment/02-mithril-installation.md)
 3. [Cardano DBSync installation](../deployment/03-cardano-dbsync-installation.md)
@@ -11,6 +12,7 @@
 6. [Local Docker](../deployment/06-docker-installation.md)
 
 **Registration**
+
 1. [Registering a Stake Pool](01-registering-stake-pool.md)
 2. **Managing a Stake Pool**
 3. [Registering a DRep](03-registering-drep.md)
@@ -58,6 +60,8 @@ scripts/query.sh params treasuryCut
 scripts/query.sh metrics
 scripts/query.sh metrics cardano_node_metrics_peerSelection_warm
 ```
+
+
 
 ### Monitoring with Grafana
 
@@ -120,6 +124,8 @@ crontab -e
 5 * * * * /home/upstream/Cardano/scripts/pool.sh get_stats >> /home/upstream/Cardano/cardano-node/logs/crontab.log 2>&1
 ```
 
+
+
 ### Rotate your KES
 
 You must rotate your KES keys every 90 days, or you will not be able to produce blocks.
@@ -140,6 +146,8 @@ scripts/node.sh restart
 scripts/query.sh kes
 ```
 
+
+
 ### Leader schedule
 
 Checking when you are due to mint blocks is essential to running your stake pool.
@@ -151,9 +159,14 @@ scripts/query.sh leader next
 # PRODUCER: OR you can check the current epoch if needed
 scripts/query.sh leader current
 
-# COPY: Copy the out put ready to past to your monitor nodes grafana csv file
-# MONITOR: Paste in the below file (if your runnong a testnet node with only a producer this is done automatically)  
+# COPY: Copy the output ready to paste to your monitor node's grafana csv file
+# MONITOR: Paste in the below file (if you are running a testnet node with only a producer this is done automatically)
 sudo nano /usr/share/grafana/slots.csv
+
+# MONITOR / combined producer: one-time so query_leader can copy slots.csv without a sudo password
+sudo touch /usr/share/grafana/slots.csv
+sudo chown upstream:grafana /usr/share/grafana/slots.csv
+sudo chmod 664 /usr/share/grafana/slots.csv
 ```
 
 To refresh the next-epoch schedule automatically, use `leader_next`. The function controls timing: it skips if that epoch's temp file already exists under `$NETWORK_PATH/logs/<epoch>.txt`, and it skips until at least 75% of the current epoch has passed (read from the node tip and `shelley-genesis.json`). Successful runs keep the epoch temp file so later cron ticks do not re-query.
@@ -188,6 +201,8 @@ simplify redeployment.
 ├── $NETWORK_PATH
 ```
 
+
+
 ### Regenerate pool certificates
 
 When you need to update your pool metadata, min cost, or other pool params, you must regenerate your `pool.cert` using
@@ -212,6 +227,8 @@ scripts/tx.sh pool_reg_sign
 # PRODUCER: Submit the signed transaction 
 scripts/tx.sh submit
 ```
+
+
 
 ### Delegating your voting power
 
@@ -242,6 +259,8 @@ scripts/tx.sh stake_reg_sign
 scripts/tx.sh submit
 ```
 
+
+
 ### Withdrawing stake pool rewards
 
 To withdraw your SPO rewards, you will need to participate in Cardano Governance by delegating your stake address
@@ -259,6 +278,8 @@ scripts/tx.sh stake_reg_sign
 # PRODUCER: Submit the signed transaction 
 scripts/tx.sh submit
 ```
+
+
 
 ### Vote on a governance action as a SPO
 
@@ -287,6 +308,8 @@ scripts/tx.sh vote_sign
 # PRODUCER: Submit the signed transaction 
 scripts/tx.sh submit
 ```
+
+
 
 ### Retiring your Stake Pool
 

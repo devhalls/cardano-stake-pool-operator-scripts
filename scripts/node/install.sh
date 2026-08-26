@@ -447,6 +447,14 @@ install_grafana() {
     sudo $grafana_cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
     sudo chown -R grafana:grafana /var/lib/grafana || _install_fail 'Could not set grafana data directory ownership' || return 1
 
+    # Seed slots.csv so query_leader can refresh it as $NODE_USER without sudo
+    local slotsCsv=/usr/share/grafana/slots.csv
+    if [ ! -f "$slotsCsv" ]; then
+        echo 'Time,Slot,No,Epoch' | sudo tee "$slotsCsv" >/dev/null || _install_fail 'Could not create grafana slots.csv' || return 1
+    fi
+    sudo chown "$NODE_USER:grafana" "$slotsCsv" || _install_fail 'Could not set grafana slots.csv ownership' || return 1
+    sudo chmod 664 "$slotsCsv" || _install_fail 'Could not set grafana slots.csv permissions' || return 1
+
     serviceDir="$SERVICES_SOURCE"
     _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
     sudo cp -p "$serviceDir/prometheus.yml.temp" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
