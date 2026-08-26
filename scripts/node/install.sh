@@ -445,6 +445,7 @@ install_grafana() {
     fi
     sudo $grafana_cli plugins install grafana-clock-panel || _install_fail 'Could not install grafana-clock-panel plugin' || return 1
     sudo $grafana_cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
+    sudo chown -R grafana:grafana /var/lib/grafana || _install_fail 'Could not set grafana data directory ownership' || return 1
 
     serviceDir="$SERVICES_SOURCE"
     _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
