@@ -60,7 +60,7 @@ and configure).
 ```shell
 mkdir Cardano && cd Cardano
 git clone https://github.com/devhalls/spo-operational-scripts.git .
-git checkout v1.0.2 
+git checkout v1.0.4 
 ```
 
 Create and edit your env file:
