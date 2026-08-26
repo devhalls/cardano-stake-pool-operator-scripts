@@ -429,8 +429,12 @@ install_grafana() {
     sudo $PACKAGER update && sudo $PACKAGER install -y prometheus grafana || _install_fail 'Could not install Grafana and Prometheus packages' || return 1
 
     source ~/.bashrc
-    sudo grafana-cli plugins install grafana-clock-panel || _install_fail 'Could not install grafana-clock-panel plugin' || return 1
-    sudo grafana-cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
+    local grafana_cli='grafana-cli'
+    if version_ge "$GRAFANA_VERSION" '13'; then
+        grafana_cli='grafana cli --homepath /usr/share/grafana'
+    fi
+    sudo $grafana_cli plugins install grafana-clock-panel || _install_fail 'Could not install grafana-clock-panel plugin' || return 1
+    sudo $grafana_cli plugins install marcusolsson-csv-datasource || _install_fail 'Could not install csv-datasource plugin' || return 1
 
     serviceDir="$SERVICES_SOURCE"
     _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
