@@ -261,13 +261,38 @@ _apply_node_metrics_config() {
     return 0
 }
 
+_prometheus_scraper_targets_yaml() {
+    local spec labels endpoint yaml=""
+    while IFS= read -r spec; do
+        [ -z "$spec" ] && continue
+        if [[ "$spec" != *:*@*:* ]]; then
+            _install_fail "PROMETHEUS_SCRAPER_TARGETS entry must be alias:type@host:port (got: $spec)" || return 1
+        fi
+        labels="${spec%@*}"
+        endpoint="${spec##*@}"
+        _topology_parse_endpoint "$endpoint" 'PROMETHEUS_SCRAPER_TARGETS' || return 1
+        yaml+="      - targets: ['${TOPOLOGY_PARSED_HOST}:${TOPOLOGY_PARSED_PORT}']"$'\n'
+        yaml+="        labels:"$'\n'
+        yaml+="          alias: '${labels%%:*}'"$'\n'
+        yaml+="          type:  '${labels#*:}'"$'\n'
+        yaml+=$'\n'
+    done < <(echo "${PROMETHEUS_SCRAPER_TARGETS}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+    [ -n "$yaml" ] || _install_fail 'PROMETHEUS_SCRAPER_TARGETS is empty' || return 1
+    printf '%s' "$yaml"
+}
+
 _render_prometheus_yml() {
     local src="$1"
     local dest="$2"
+    local targets
+    targets="$(_prometheus_scraper_targets_yaml)" || return 1
     sed \
         -e "s|__NODE_METRICS_PORT__|${NODE_METRICS_PORT}|g" \
         -e "s|__MITHRIL_METRICS_SERVER_PORT__|${MITHRIL_METRICS_SERVER_PORT}|g" \
-        "$src" >"$dest" || _install_fail 'Could not render prometheus.yml' || return 1
+        "$src" | PROMETHEUS_TARGETS_YAML="$targets" awk '
+            /__PROMETHEUS_SCRAPER_TARGETS__/ { printf "%s\n", ENVIRON["PROMETHEUS_TARGETS_YAML"]; next }
+            { print }
+        ' >"$dest" || _install_fail 'Could not render prometheus.yml' || return 1
     return 0
 }
 
@@ -392,6 +417,8 @@ install_prometheus_exporter() {
 install_grafana() {
     _require_relay_node || return 1
     print 'INSTALL' 'Grafana dashboard'
+    # Validate PROMETHEUS_SCRAPER_TARGETS before apt; YAML is rendered later by _render_prometheus_yml
+    _prometheus_scraper_targets_yaml >/dev/null || return 1
 
     wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add - || _install_fail 'Could not add Grafana GPG key' || return 1
     echo "deb https://packages.grafana.com/oss/deb stable main" >grafana.list

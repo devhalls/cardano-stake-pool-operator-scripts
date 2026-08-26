@@ -72,7 +72,7 @@ packages and configs, restart your nodes, and you can visit the dashboard.
 # ALL NODES: Install prometheus explorer on all nodes
 scripts/node.sh install prometheus_explorer
 
-# MONITOR: Install grafana on the monitoring node only
+# MONITOR Istall grafana (on a testnet producer / relay monitor)
 scripts/node.sh install grafana
 
 # ALL NODES: Check the service status
@@ -91,8 +91,9 @@ scripts/node.sh restart_prom
 # MONITOR: Restart the grafana services
 scripts/node.sh restart_grafana
 
-# MONITOR: Edit your prometheus config to collect data from all your replays, then restart
-sudo nano /etc/prometheus/prometheus.yml
+# MONITOR: Set PROMETHEUS_SCRAPER_TARGETS in env (alias:type@host:port,...), then re-run install grafana
+# or edit /etc/prometheus/prometheus.yml and restart
+scripts/node.sh install grafana
 scripts/node.sh restart_prom
 
 # MONITOR: You may need to add the prometheus user to the folders group to avoid permission issues

@@ -9,13 +9,6 @@ scrape_configs:
       - targets: [ 'localhost:__MITHRIL_METRICS_SERVER_PORT__' ]
 
   - job_name: 'prometheus'
+    # PROMETHEUS_SCRAPER_TARGETS: alias:type@host:port,...
     static_configs:
-      - targets: ['localhost:9100']
-        labels:
-          alias: 'block-producer-node'
-          type:  'cardano-node'
-
-      - targets: ['localhost:__NODE_METRICS_PORT__']
-        labels:
-          alias: 'block-producer-node'
-          type:  'cardano-node'
+__PROMETHEUS_SCRAPER_TARGETS__
