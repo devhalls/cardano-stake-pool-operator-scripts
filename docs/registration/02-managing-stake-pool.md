@@ -156,6 +156,21 @@ scripts/query.sh leader current
 sudo nano /usr/share/grafana/slots.csv
 ```
 
+To refresh the next-epoch schedule automatically, use `leader_next`. The function controls timing: it skips if that epoch's temp file already exists under `$NETWORK_PATH/logs/<epoch>.txt`, and it skips until at least 75% of the current epoch has passed (read from the node tip and `shelley-genesis.json`). Successful runs keep the epoch temp file so later cron ticks do not re-query.
+
+```shell
+# PRODUCER: Check you can retrieve the next-epoch schedule (or that it correctly skips)
+scripts/query.sh leader_next
+
+# If successful (you see schedule output, or a skip message) setup a crontab
+crontab -e
+
+# Check hourly; query_leader_next() decides whether it is time to run
+20 * * * * /home/upstream/Cardano/scripts/query.sh leader_next >> /home/upstream/Cardano/cardano-node/logs/crontab.log 2>&1
+```
+
+Confirm the crontab and last output from `scripts/node.sh status` (Stake Pool - Services).
+
 ### Backing up your pool
 
 It's vitally import you make multiple backups of your node cold keys. You can also back up your producer and relays to

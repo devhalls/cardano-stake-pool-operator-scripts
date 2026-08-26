@@ -11,6 +11,7 @@
 #   kes_period |
 #   uxto [address <STRING>] |
 #   leader [period <STRING<'current'|'next'>>] |
+#   leader_next |
 #   rewards [name <STRING>] |
 #   help [-h]
 # )
@@ -28,6 +29,7 @@
 #   - kes_period) Query the kes period params. Useful when generating pool certificates.
 #   - uxto) Query the uxto for an address. Defaults to $PAYMENT_ADDR if non is passed.
 #   - leader) Run the pool leader slot query. Pass the period to choose which epoch to query ['next' | 'current' ].
+#   - leader_next) Query next-epoch leadership slots when at least 75% of the current epoch has passed. Skips if already ran (epoch temp file present). Intended for crontab; the function controls timing.
 #   - rewards) Query stake address info. Optionally pass a param name to view only this value.
 #   - help) View this files help. Default value if no option is passed.
 
@@ -235,13 +237,17 @@ query_leader() {
         --genesis "$NETWORK_PATH/shelley-genesis.json" \
         --stake-pool-id "$poolId" \
         --vrf-signing-key-file "$VRF_KEY" \
-        $period >"$tempFilePath" || _query_fail 'Leadership schedule failed to run' || return 1
+        $period >"$tempFilePath" || {
+            rm -f "$tempFilePath"
+            _query_fail 'Leadership schedule failed to run' || return 1
+        }
 
     if [ ! -f "$csvFile" ]; then
         echo 'Time,Slot,No,Epoch' >"$csvFile" || _query_fail 'Could not create slots CSV file' || return 1
     fi
 
-    if [ ! -f "$tempFilePath" ]; then
+    if [ ! -s "$tempFilePath" ]; then
+        rm -f "$tempFilePath"
         _query_fail 'Leadership schedule failed to run' || return 1
     fi
 
@@ -253,7 +259,10 @@ query_leader() {
          | strptime("%Y-%m-%dT%H:%M:%SZ")
          | strftime("%Y-%m-%d %H:%M:%S")) as $dt
       | "\($dt),\($v.slotNumber),\(.key + 1),\($epoch)"
-    ' "$tempFilePath") || _query_fail 'Could not parse leadership schedule output' || return 1
+    ' "$tempFilePath") || {
+        rm -f "$tempFilePath"
+        _query_fail 'Could not parse leadership schedule output' || return 1
+    }
 
     while IFS= read -r line; do
         [ -z "$line" ] && continue
@@ -264,8 +273,36 @@ query_leader() {
     if [ -d "$grafanaLocation" ]; then
         sudo cp "$csvFile" "$grafanaLocation/slots.csv" || _query_fail 'Could not copy slots CSV to grafana' || return 1
     fi
-    rm "$tempFilePath" || _query_fail 'Could not remove temporary leadership schedule file' || return 1
     return 0
+}
+
+query_leader_next() {
+    _require_producer_node || return 1
+    _require_file "$POOL_ID" || return 1
+    _require_file "$NETWORK_PATH/shelley-genesis.json" || return 1
+
+    local currentEpoch slotInEpoch epochLength targetEpoch tempFilePath epochPct
+    currentEpoch=$(query_tip epoch) || return 1
+    targetEpoch=$((currentEpoch + 1))
+    tempFilePath=$NETWORK_PATH/logs/$targetEpoch.txt
+
+    if [ -s "$tempFilePath" ] && jq empty "$tempFilePath" 2>/dev/null; then
+        print 'QUERY' "Leadership schedule for epoch $targetEpoch already exists at $tempFilePath"
+        return 0
+    fi
+
+    slotInEpoch=$(query_tip slotInEpoch) || return 1
+    epochLength=$(jq -r '.epochLength' "$NETWORK_PATH/shelley-genesis.json")
+    if [ -z "$slotInEpoch" ] || [ "$slotInEpoch" = "null" ] || [ -z "$epochLength" ] || [ "$epochLength" = "null" ] || [ "$epochLength" -le 0 ]; then
+        _query_fail 'Could not determine epoch progress from the node' || return 1
+    fi
+    if (( slotInEpoch * 100 < epochLength * 75 )); then
+        epochPct=$((slotInEpoch * 100 / epochLength))
+        print 'QUERY' "Leadership schedule skipped: epoch $currentEpoch is ${epochPct}% complete (need 75%)"
+        return 0
+    fi
+
+    query_leader next
 }
 
 query_rewards() {
@@ -296,6 +333,7 @@ case $1 in
     kes_period) query_kes_period ;;
     uxto) query_uxto "${@:2}" ;;
     leader) query_leader "${@:2}" ;;
+    leader_next) query_leader_next ;;
     rewards) query_rewards "${@:2}" ;;
     help) help "${2:-"--help"}" ;;
     *) help "${1:-"--help"}" ;;

@@ -180,7 +180,7 @@ Requires a synced node and socket. Core chain queries always run; wallet and pro
 | Config | `config.json` readable |
 | KES period | `kes_period` (uses genesis + tip) |
 | Wallet | `uxto`, `rewards`, `key payment.addr` (skip until keys exist — use `docker/fixture.sh`) |
-| Producer | `kes`, `leader next` (needs `NODE_TYPE=producer` + pool keys) |
+| Producer | `kes`, `leader next`, `leader_next` (needs `NODE_TYPE=producer` + pool keys) |
 
 ---
 

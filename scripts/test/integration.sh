@@ -35,6 +35,7 @@ run_suite_integration() {
     # producer-only queries
     run_test integration_query_kes test_integration_query_kes
     run_test integration_query_leader_next test_integration_query_leader_next
+    run_test integration_query_leader_next_cron test_integration_query_leader_next_cron
 }
 
 list_suite_integration() {
@@ -46,7 +47,7 @@ list_suite_integration() {
     echo "  config: integration_query_config_json"
     echo "  integration_query_kes_period"
     echo "  wallet (optional keys): integration_query_uxto|rewards|key_payment_addr"
-    echo "  producer (optional): integration_query_kes|leader_next"
+    echo "  producer (optional): integration_query_kes|leader_next|leader_next_cron"
 }
 
 # --- helpers ---
@@ -198,6 +199,25 @@ test_integration_query_leader_next() {
         return 2
     fi
     capture_script query.sh leader next || return 1
+    return 0
+}
+
+test_integration_query_leader_next_cron() {
+    if ! require_producer_node; then
+        echo "NODE_TYPE=$NODE_TYPE — leader_next requires producer"
+        return 2
+    fi
+    if ! assert_file_exists "$POOL_ID" >/dev/null 2>&1; then
+        echo "pool.id missing — register pool with docker/fixture.sh spo_register"
+        return 2
+    fi
+    if ! assert_file_exists "$VRF_KEY" >/dev/null 2>&1; then
+        echo "vrf.skey missing — create pool keys with docker/fixture.sh spo"
+        return 2
+    fi
+    capture_script query.sh leader_next || return 1
+    echo "$TEST_LAST_CAPTURE" | grep -Eq 'already exists|skipped: epoch|Time,Slot,No,Epoch|Leadership schedule' \
+        || { echo "leader_next returned no skip or schedule output"; return 1; }
     return 0
 }
 

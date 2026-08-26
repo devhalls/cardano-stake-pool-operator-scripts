@@ -150,6 +150,8 @@ print_crontab_state() {
     case "$NODE_NETWORK:$NODE_TYPE:$cronTab" in
         *":"*":$NODE_HOME/scripts/pool.sh get_stats")
             required="required" ;;
+        *":producer:$NODE_HOME/scripts/query.sh leader_next")
+            required="required" ;;
         *) required="-" ;;
     esac
 

@@ -200,6 +200,38 @@ node_status() {
                     promNodeVersionOutput="${red}$prodDataPath${nc} | ${red}required${nc}"
                 fi
 
+                # Prepare next-epoch leader schedule check
+                local leaderNextExists
+                local leaderNextOutput
+                if [[ "$NODE_TYPE" != "producer" ]]; then
+                    leaderNextExists="yes"
+                    leaderNextOutput="${green}producer only${nc} | ${green}-${nc}"
+                else
+                    local tipJson currentEpoch slotInEpoch epochLength nextEpoch leaderNextPath epochPct
+                    tipJson=$($(dirname "$0")/query.sh tip 2>/dev/null)
+                    currentEpoch=$(echo "$tipJson" | jq -r '.epoch // empty')
+                    slotInEpoch=$(echo "$tipJson" | jq -r '.slotInEpoch // empty')
+                    epochLength=$(jq -r '.epochLength // empty' "$NETWORK_PATH/shelley-genesis.json" 2>/dev/null)
+                    if [[ -n "$currentEpoch" && -n "$slotInEpoch" && -n "$epochLength" && "$epochLength" -gt 0 ]]; then
+                        nextEpoch=$((currentEpoch + 1))
+                        leaderNextPath=$NETWORK_PATH/logs/$nextEpoch.txt
+                        epochPct=$((slotInEpoch * 100 / epochLength))
+                        if [[ -s "$leaderNextPath" ]] && jq empty "$leaderNextPath" 2>/dev/null; then
+                            leaderNextExists="yes"
+                            leaderNextOutput="${green}$leaderNextPath contains epoch $nextEpoch${nc} | ${green}required${nc}"
+                        elif (( slotInEpoch * 100 < epochLength * 75 )); then
+                            leaderNextExists="yes"
+                            leaderNextOutput="${green}$leaderNextPath pending (${epochPct}% of epoch, need 75%)${nc} | ${green}required${nc}"
+                        else
+                            leaderNextExists=""
+                            leaderNextOutput="${red}$leaderNextPath missing (${epochPct}% of epoch)${nc} | ${red}required${nc}"
+                        fi
+                    else
+                        leaderNextExists=""
+                        leaderNextOutput="${red}$NETWORK_PATH/logs/<next-epoch>.txt${nc} | ${red}required${nc}"
+                    fi
+                fi
+
                 # Prepare DBSync and postgres checks
                 local dbSyncOutput
                 local dbSyncBlock=$($(dirname "$0")/dbsync.sh get_block)
@@ -220,6 +252,8 @@ node_status() {
                     "$(print_service_state $PROMETHEUS_EXPORTER_SERVICE "Prometheus Exporter")"
                     "$(print_crontab_state "$NODE_HOME/scripts/pool.sh get_stats" "Crontab get_stats()")"
                     "$(print_state "$promNodeVersionExists" "Crontab get_stats() Output | $promNodeVersionOutput")"
+                    "$(print_crontab_state "$NODE_HOME/scripts/query.sh leader_next" "Crontab query_leader_next()")"
+                    "$(print_state "$leaderNextExists" "Crontab query_leader_next() Output | $leaderNextOutput")"
                     "$(print_service_state $PROMETHEUS_SCRAPER_SERVICE "Prometheus Scraper")"
                     "$(print_service_state $GRAFANA_SERVICE "Grafana Dashboard")"
                     "$(print_service_state $NGROK_SERVICE "Ngrok Networking")"
