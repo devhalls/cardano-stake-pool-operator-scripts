@@ -22,24 +22,25 @@ run_suite_smoke() {
 }
 
 list_suite_smoke() {
-    echo "smoke:"
-    echo "  smoke_env_files"
-    echo "  smoke_env_runtime"
-    echo "  smoke_services_release"
-    echo "  smoke_configs_release"
-    echo "  smoke_build_release"
-    echo "  smoke_cardano_cli"
-    echo "  smoke_help_address"
-    echo "  smoke_help_query"
-    echo "  smoke_help_pool"
-    echo "  smoke_help_tx"
-    echo "  smoke_help_govern"
-    echo "  smoke_help_node"
-    echo "  smoke_help_dbsync"
-    echo "  smoke_help_network"
-    echo "  smoke_help_midnight"
-    echo "  smoke_help_node_install"
-    echo "  smoke_install_validate"
+    print_table \
+        "SUITE | TEST" \
+        "smoke | smoke_env_files" \
+        "smoke | smoke_env_runtime" \
+        "smoke | smoke_services_release" \
+        "smoke | smoke_configs_release" \
+        "smoke | smoke_build_release" \
+        "smoke | smoke_cardano_cli" \
+        "smoke | smoke_help_address" \
+        "smoke | smoke_help_query" \
+        "smoke | smoke_help_pool" \
+        "smoke | smoke_help_tx" \
+        "smoke | smoke_help_govern" \
+        "smoke | smoke_help_node" \
+        "smoke | smoke_help_dbsync" \
+        "smoke | smoke_help_network" \
+        "smoke | smoke_help_midnight" \
+        "smoke | smoke_help_node_install" \
+        "smoke | smoke_install_validate"
 }
 
 test_smoke_env_files() {

@@ -162,49 +162,365 @@ print_crontab_state() {
     fi
 }
 
+table_strip_ansi() {
+    printf '%s' "$1" | sed $'s/\033\\[[0-9;]*[mK]//g'
+}
+
+table_trim() {
+    local s="$1"
+    s="${s#"${s%%[![:space:]]*}"}"
+    s="${s%"${s##*[![:space:]]}"}"
+    printf '%s' "$s"
+}
+
+table_visible_len() {
+    local clean
+    clean="$(table_strip_ansi "$1")"
+    printf '%s' "${#clean}"
+}
+
+# Terminal width for wrapping. Override with PRINT_TABLE_MAX_WIDTH.
+table_term_width() {
+    local w="${PRINT_TABLE_MAX_WIDTH:-}"
+    case "$w" in
+        '' | *[!0-9]*) ;;
+        *) [ "$w" -gt 0 ] && echo "$w" && return ;;
+    esac
+    w="${COLUMNS:-}"
+    case "$w" in
+        '' | *[!0-9]*) ;;
+        *) [ "$w" -gt 0 ] && echo "$w" && return ;;
+    esac
+    w="$(tput cols 2>/dev/null)" || w=""
+    case "$w" in
+        '' | *[!0-9]*) ;;
+        *) [ "$w" -gt 0 ] && echo "$w" && return ;;
+    esac
+    echo 80
+}
+
+# Make a cell safe as a print_table field (`|` is the column delimiter).
+table_sanitize_cell() {
+    local s="$1"
+    s="${s//$'\n'/ }"
+    s="${s//|/;}"
+    printf '%s' "$s"
+}
+
+# Hard-wrap to `width` visible columns. ANSI sequences are not counted and
+# active color is carried onto the next line so a split path stays colored.
+_table_hard_wrap() {
+    local s="$1"
+    local width="$2"
+    local i=0
+    local n=${#s}
+    local visible=0
+    local buf=""
+    local active=""
+    local ch seq
+
+    [ "$width" -lt 1 ] && width=1
+
+    while [ "$i" -lt "$n" ]; do
+        ch="${s:i:1}"
+        if [ "$ch" = $'\033' ]; then
+            seq="$ch"
+            i=$((i + 1))
+            while [ "$i" -lt "$n" ]; do
+                ch="${s:i:1}"
+                seq="${seq}${ch}"
+                i=$((i + 1))
+                case "$ch" in
+                    [A-Za-z]) break ;;
+                esac
+            done
+            buf="${buf}${seq}"
+            case "$seq" in
+                *m)
+                    case "$seq" in
+                        *$'\033[0m' | *$'\033[m') active="" ;;
+                        *) active="$seq" ;;
+                    esac
+                    ;;
+            esac
+            continue
+        fi
+        buf="${buf}${ch}"
+        visible=$((visible + 1))
+        i=$((i + 1))
+        if [ "$visible" -ge "$width" ]; then
+            if [ -n "$active" ]; then
+                printf '%s%s\n' "$buf" "$nc"
+                buf="$active"
+            else
+                printf '%s\n' "$buf"
+                buf=""
+            fi
+            visible=0
+        fi
+    done
+    if [ "$visible" -gt 0 ]; then
+        printf '%s\n' "$buf"
+    fi
+}
+
+# Last punctuation index in the first `width` visible chars (for path-friendly wrap).
+_table_last_break() {
+    local s="$1"
+    local width="$2"
+    local i=0
+    local n=${#s}
+    local visible=0
+    local last_slash=-1
+    local last_other=-1
+    local ch
+
+    while [ "$i" -lt "$n" ] && [ "$visible" -lt "$width" ]; do
+        ch="${s:i:1}"
+        if [ "$ch" = $'\033' ]; then
+            i=$((i + 1))
+            while [ "$i" -lt "$n" ]; do
+                ch="${s:i:1}"
+                i=$((i + 1))
+                case "$ch" in
+                    [A-Za-z]) break ;;
+                esac
+            done
+            continue
+        fi
+        visible=$((visible + 1))
+        if [ "$i" -gt 0 ]; then
+            case "$ch" in
+                /) last_slash=$i ;;
+                - | _ | = | : | ';' | ,) last_other=$i ;;
+            esac
+        fi
+        i=$((i + 1))
+    done
+    if [ "$last_slash" -gt 0 ]; then
+        printf '%s' "$last_slash"
+    else
+        printf '%s' "$last_other"
+    fi
+}
+
+# Split an oversize token at punctuation, else hard-wrap.
+_table_split_long_word() {
+    local word="$1"
+    local width="$2"
+    local break_at prefix rest
+
+    while [ "$(table_visible_len "$word")" -gt "$width" ]; do
+        break_at="$(_table_last_break "$word" "$width")"
+        if [ "$break_at" -gt 0 ]; then
+            prefix="${word:0:$((break_at + 1))}"
+            rest="${word:$((break_at + 1))}"
+            if [ -n "$rest" ]; then
+                printf '%s\n' "$prefix"
+                word="$rest"
+                continue
+            fi
+        fi
+        _table_hard_wrap "$word" "$width"
+        return
+    done
+    [ -n "$word" ] && printf '%s\n' "$word"
+}
+
+# Word-wrap a cell to `width` visible columns; oversize tokens wrap at punctuation.
+table_wrap_cell() {
+    local text="$1"
+    local width="$2"
+    local line word current vis_word vis_cur
+    local -a words
+
+    [ -z "$width" ] && width=1
+    [ "$width" -lt 1 ] && width=1
+
+    if [ -z "$text" ]; then
+        printf '\n'
+        return
+    fi
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        current=""
+        if [ -z "$line" ]; then
+            printf '\n'
+            continue
+        fi
+        IFS=' ' read -ra words <<< "$line"
+        for word in "${words[@]}"; do
+            vis_word="$(table_visible_len "$word")"
+            if [ -z "$current" ]; then
+                if [ "$vis_word" -gt "$width" ]; then
+                    _table_split_long_word "$word" "$width"
+                else
+                    current="$word"
+                fi
+            else
+                vis_cur="$(table_visible_len "${current} ${word}")"
+                if [ "$vis_cur" -le "$width" ]; then
+                    current="${current} ${word}"
+                else
+                    printf '%s\n' "$current"
+                    if [ "$vis_word" -gt "$width" ]; then
+                        _table_split_long_word "$word" "$width"
+                        current=""
+                    else
+                        current="$word"
+                    fi
+                fi
+            fi
+        done
+        if [ -n "$current" ]; then
+            printf '%s\n' "$current"
+        fi
+    done <<< "$text"
+}
+
+# Header row matching node.sh: "+ - | COL | COL"
+table_header() {
+    local body=""
+    local part
+    for part in "$@"; do
+        body+=" | $(table_sanitize_cell "$part")"
+    done
+    echo -e "${green}+${nc} ${red}-${nc}${body}"
+}
+
+# Status row: pass (+++), fail (---), or skip (~~~). Remaining args are columns.
+table_status_row() {
+    local state="$1"
+    shift
+    local body=""
+    local part
+    for part in "$@"; do
+        [ -n "$body" ] && body+=" | "
+        body+="$(table_sanitize_cell "$part")"
+    done
+    case "$state" in
+        skip)
+            echo -e "${orange}~~~${nc} | ${body}"
+            ;;
+        "")
+            print_state "" "$body"
+            ;;
+        *)
+            print_state "ok" "$body"
+            ;;
+    esac
+}
+
+# Box-drawn table. Rows are `|`-separated (print_state / table_status_row).
+# Long cells wrap so the table fits the terminal; last columns shrink first.
 print_table() {
-  local lines=("$@")
-  local -a col_widths
-  local max_cols=0
+    local lines=("$@")
+    local -a col_widths
+    local -a cols
+    local max_cols=0
+    local i line clean len val color_len pad_width
+    local min_width=3
 
-  # First pass: measure visible widths (no ANSI codes)
-  for line in "${lines[@]}"; do
-    line="${line#"${line%%[![:space:]]*}"}"
-    IFS='|' read -ra cols <<< "$line"
-    (( ${#cols[@]} > max_cols )) && max_cols=${#cols[@]}
+    [ ${#lines[@]} -eq 0 ] && return 0
 
-    for ((i = 0; i < ${#cols[@]}; i++)); do
-      local clean=$(echo "${cols[i]}" | sed -E 's/\x1B\[[0-9;]*m//g' | xargs)
-      local len=${#clean}
-      (( len > col_widths[i] )) && col_widths[i]=$len
+    for line in "${lines[@]}"; do
+        line="${line#"${line%%[![:space:]]*}"}"
+        IFS='|' read -ra cols <<< "$line"
+        (( ${#cols[@]} > max_cols )) && max_cols=${#cols[@]}
+
+        for ((i = 0; i < ${#cols[@]}; i++)); do
+            clean="$(table_trim "$(table_strip_ansi "${cols[i]}")")"
+            len=${#clean}
+            if [ -z "${col_widths[i]:-}" ] || [ "$len" -gt "${col_widths[i]}" ]; then
+                col_widths[i]=$len
+            fi
+        done
     done
-  done
 
-  # Draw horizontal border
-  draw_border() {
-    printf "+"
-    for width in "${col_widths[@]}"; do
-      printf "%s+" "$(printf '%*s' $((width + 2)) '' | tr ' ' '-')"
-    done
-    echo
-  }
+    [ "$max_cols" -eq 0 ] && return 0
 
-  # Print rows with visible alignment, preserving color
-  draw_border
-  for line in "${lines[@]}"; do
-    line="${line#"${line%%[![:space:]]*}"}"
-    IFS='|' read -ra cols <<< "$line"
-    printf "|"
     for ((i = 0; i < max_cols; i++)); do
-      local val=$(echo "${cols[i]:-}" | xargs)
-      local clean=$(echo "$val" | sed -E 's/\x1B\[[0-9;]*m//g')
-      local color_len=$(( ${#val} - ${#clean} ))
-      local pad_width=$(( col_widths[i] + color_len ))
-      printf " %-*s |" "$pad_width" "$val"
+        col_widths[i]="${col_widths[i]:-0}"
     done
-    echo
+
+    local overhead=$((3 * max_cols + 1))
+    local usable
+    usable="$(table_term_width)"
+    [ "$usable" -lt 20 ] && usable=20
+    local budget=$((usable - overhead))
+    local min_budget=$((max_cols * min_width))
+    [ "$budget" -lt "$min_budget" ] && budget=$min_budget
+
+    local sum=0
+    for ((i = 0; i < max_cols; i++)); do
+        sum=$((sum + col_widths[i]))
+    done
+    local excess=$((sum - budget))
+    i=$((max_cols - 1))
+    while [ "$excess" -gt 0 ] && [ "$i" -ge 0 ]; do
+        local reducible=$((col_widths[i] - min_width))
+        if [ "$reducible" -gt 0 ]; then
+            if [ "$reducible" -gt "$excess" ]; then
+                col_widths[i]=$((col_widths[i] - excess))
+                excess=0
+            else
+                col_widths[i]=$min_width
+                excess=$((excess - reducible))
+            fi
+        fi
+        i=$((i - 1))
+    done
+
+    draw_border() {
+        printf "+"
+        local width
+        for width in "${col_widths[@]}"; do
+            printf "%s+" "$(printf '%*s' $((width + 2)) '' | tr ' ' '-')"
+        done
+        echo
+    }
+
     draw_border
-  done
+    local -a wrapped
+    local row_height j piece wrapped_text this_h idx
+    for line in "${lines[@]}"; do
+        line="${line#"${line%%[![:space:]]*}"}"
+        IFS='|' read -ra cols <<< "$line"
+        wrapped=()
+        row_height=1
+        for ((i = 0; i < max_cols; i++)); do
+            val="$(table_trim "${cols[i]:-}")"
+            wrapped_text="$(table_wrap_cell "$val" "${col_widths[i]}")"
+            wrapped_text="${wrapped_text%$'\n'}"
+            wrapped[i]="$wrapped_text"
+            this_h=0
+            while IFS= read -r piece || [ -n "$piece" ]; do
+                this_h=$((this_h + 1))
+            done <<< "$wrapped_text"
+            [ "$this_h" -gt "$row_height" ] && row_height=$this_h
+        done
+
+        for ((j = 0; j < row_height; j++)); do
+            printf "|"
+            for ((i = 0; i < max_cols; i++)); do
+                piece=""
+                idx=0
+                while IFS= read -r val || [ -n "$val" ]; do
+                    if [ "$idx" -eq "$j" ]; then
+                        piece="$val"
+                        break
+                    fi
+                    idx=$((idx + 1))
+                done <<< "${wrapped[i]}"
+                clean="$(table_strip_ansi "$piece")"
+                color_len=$((${#piece} - ${#clean}))
+                pad_width=$((col_widths[i] + color_len))
+                printf " %-*s |" "$pad_width" "$piece"
+            done
+            echo
+        done
+        draw_border
+    done
 }
 
 print_json_error() {

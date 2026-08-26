@@ -10,7 +10,9 @@ TEST_REPORT="${TEST_REPORT:-0}"
 TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR:-$(mktemp -d)}"
 TEST_LAST_CAPTURE=""
 TEST_FAILURE_LOG=""
+TEST_VERBOSE_LOG=""
 TEST_RUN_LINES=""
+TEST_RESULT_ROWS=()
 
 TEST_SCRIPTS_DIR="${TEST_SCRIPTS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 TEST_REPO_ROOT="${TEST_REPO_ROOT:-$REPO_ROOT}"
@@ -173,20 +175,68 @@ require_network_config() {
 
 # --- runner ---
 
+# First useful line of captured output for the results DETAIL column
+# (skip box-drawing / empty lines from print_table; prefer a failing row).
+test_detail_from_output() {
+    local output="$1"
+    local line clean last="" fail=""
+    while IFS= read -r line || [ -n "$line" ]; do
+        [ -z "$line" ] && continue
+        clean="$(table_trim "$(table_strip_ansi "$line")")"
+        case "$clean" in
+            '' | +* | '|'*) continue ;;
+        esac
+        last="$clean"
+        case "$clean" in
+            ---*)
+                [ -z "$fail" ] && fail="$(table_trim "${clean#---}")"
+                ;;
+            extra\ * | missing\ * | empty\ * | invalid\ * | *mismatch* | *failed* | *'out of date'* | *'not found'*)
+                [ -z "$fail" ] && fail="$clean"
+                ;;
+        esac
+    done <<< "$output"
+    if [ -n "$fail" ]; then
+        table_sanitize_cell "$fail"
+    else
+        table_sanitize_cell "$last"
+    fi
+}
+
+test_record_result() {
+    local kind="$1"
+    local name="$2"
+    local detail="$3"
+
+    case "$kind" in
+        skip)
+            TEST_SKIPPED=$((TEST_SKIPPED + 1))
+            TEST_RESULT_ROWS+=("$(table_status_row skip "$name" "SKIP" "$detail")")
+            TEST_RUN_LINES+="SKIP | $name | $detail"$'\n'
+            ;;
+        pass)
+            TEST_PASSED=$((TEST_PASSED + 1))
+            TEST_RESULT_ROWS+=("$(table_status_row ok "$name" "PASS" "$detail")")
+            TEST_RUN_LINES+="PASS | $name"$'\n'
+            ;;
+        fail)
+            TEST_FAILED=$((TEST_FAILED + 1))
+            TEST_RESULT_ROWS+=("$(table_status_row "" "$name" "FAIL" "$detail")")
+            TEST_RUN_LINES+="FAIL | $name"$'\n'
+            ;;
+    esac
+}
+
 skip_test() {
     local name="$1"
     local reason="$2"
-    TEST_SKIPPED=$((TEST_SKIPPED + 1))
-    echo -e "${orange}SKIP${nc} | $name | $reason"
-    TEST_RUN_LINES+="SKIP | $name | $reason"$'\n'
+    test_record_result skip "$name" "$reason"
 }
 
 run_test() {
     local name="$1"
     local fn="$2"
     shift 2
-
-    echo -e "${blue}RUN${nc} | $name"
 
     local capture_file
     capture_file="$(mktemp)"
@@ -212,35 +262,53 @@ run_test() {
     fi
 
     if [ "$code" -eq 0 ]; then
-        TEST_PASSED=$((TEST_PASSED + 1))
-        print_state "pass" "$name"
-        TEST_RUN_LINES+="PASS | $name"$'\n'
+        test_record_result pass "$name" ""
         if [ "$TEST_VERBOSE" -eq 1 ] && [ -n "$output" ]; then
-            echo "$output" | sed 's/^/  /'
+            TEST_VERBOSE_LOG+="=== $name ==="$'\n'"$output"$'\n\n'
         fi
         return 0
     fi
 
-    TEST_FAILED=$((TEST_FAILED + 1))
-    print_state "" "$name"
-    TEST_RUN_LINES+="FAIL | $name"$'\n'
-    echo -e "${red}FAILURE OUTPUT:${nc}"
-    echo "$output" | sed 's/^/  /'
+    test_record_result fail "$name" "$(test_detail_from_output "$output")"
     TEST_FAILURE_LOG+="=== $name ==="$'\n'"$output"$'\n\n'
     return 1
 }
 
+test_print_results_table() {
+    [ ${#TEST_RESULT_ROWS[@]} -eq 0 ] && return 0
+    print_table "$(table_header TEST STATUS DETAIL)" "${TEST_RESULT_ROWS[@]}"
+}
+
 test_print_summary() {
     local suite="${1:-all}"
+    local result_cell
+
     echo ""
-    print 'TEST' "Suite: $suite" $blue
-    print 'TEST' "Passed: $TEST_PASSED | Failed: $TEST_FAILED | Skipped: $TEST_SKIPPED" $orange
-    if [ "$TEST_FAILED" -gt 0 ]; then
-        print 'TEST' 'One or more tests failed' $red
-        return 1
+    test_print_results_table
+
+    if [ "$TEST_VERBOSE" -eq 1 ] && [ -n "$TEST_VERBOSE_LOG" ]; then
+        echo ""
+        print 'TEST' 'Verbose output' $blue
+        printf '%s' "$TEST_VERBOSE_LOG"
     fi
-    print 'TEST' 'All tests passed' $green
-    return 0
+
+    if [ "$TEST_FAILED" -gt 0 ] && [ -n "$TEST_FAILURE_LOG" ]; then
+        echo ""
+        print 'TEST' 'Failure details' $red
+        printf '%s' "$TEST_FAILURE_LOG"
+    fi
+
+    echo ""
+    if [ "$TEST_FAILED" -gt 0 ]; then
+        result_cell="$(table_status_row "" "$suite" "$TEST_PASSED" "$TEST_FAILED" "$TEST_SKIPPED" "failed")"
+    else
+        result_cell="$(table_status_row ok "$suite" "$TEST_PASSED" "$TEST_FAILED" "$TEST_SKIPPED" "passed")"
+    fi
+    print_table \
+        "$(table_header SUITE PASSED FAILED SKIPPED RESULT)" \
+        "$result_cell"
+
+    [ "$TEST_FAILED" -eq 0 ]
 }
 
 test_reset_counters() {
@@ -248,7 +316,9 @@ test_reset_counters() {
     TEST_FAILED=0
     TEST_SKIPPED=0
     TEST_FAILURE_LOG=""
+    TEST_VERBOSE_LOG=""
     TEST_RUN_LINES=""
+    TEST_RESULT_ROWS=()
 }
 
 test_environment_label() {

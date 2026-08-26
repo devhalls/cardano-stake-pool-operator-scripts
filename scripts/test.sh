@@ -75,6 +75,8 @@ parse_args "$@"
 case "$TEST_SUITE" in
     smoke)
         test_reset_counters
+        print 'TEST' 'Running suite: smoke' $blue
+        echo ""
         run_suite_smoke
         test_print_summary smoke
         code=$?
@@ -83,6 +85,8 @@ case "$TEST_SUITE" in
         ;;
     integration)
         test_reset_counters
+        print 'TEST' 'Running suite: integration' $blue
+        echo ""
         run_suite_integration
         test_print_summary integration
         code=$?

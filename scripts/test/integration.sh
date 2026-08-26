@@ -39,15 +39,26 @@ run_suite_integration() {
 }
 
 list_suite_integration() {
-    echo "integration (requires socket):"
-    echo "  chain: integration_query_tip_slot|epoch|block|hash"
-    echo "  params: integration_query_params_min_pool_cost|stake_deposit|writes_json"
-    echo "  metrics: integration_query_metrics|metrics_cardano_series"
-    echo "  integration_node_version"
-    echo "  config: integration_query_config_json"
-    echo "  integration_query_kes_period"
-    echo "  wallet (optional keys): integration_query_uxto|rewards|key_payment_addr"
-    echo "  producer (optional): integration_query_kes|leader_next|leader_next_cron"
+    print_table \
+        "SUITE | GROUP | TEST" \
+        "integration | chain | integration_query_tip_slot" \
+        "integration | chain | integration_query_tip_epoch" \
+        "integration | chain | integration_query_tip_block" \
+        "integration | chain | integration_query_tip_hash" \
+        "integration | params | integration_query_params_min_pool_cost" \
+        "integration | params | integration_query_params_stake_deposit" \
+        "integration | params | integration_query_params_writes_json" \
+        "integration | metrics | integration_query_metrics" \
+        "integration | metrics | integration_query_metrics_cardano_series" \
+        "integration | node | integration_node_version" \
+        "integration | config | integration_query_config_json" \
+        "integration | config | integration_query_kes_period" \
+        "integration | wallet | integration_query_uxto" \
+        "integration | wallet | integration_query_rewards" \
+        "integration | wallet | integration_query_key_payment_addr" \
+        "integration | producer | integration_query_kes" \
+        "integration | producer | integration_query_leader_next" \
+        "integration | producer | integration_query_leader_next_cron"
 }
 
 # --- helpers ---
