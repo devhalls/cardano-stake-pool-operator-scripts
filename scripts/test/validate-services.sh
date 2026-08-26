@@ -13,7 +13,7 @@ services_validate_add_row() {
 
 services_validate_print_rows() {
     [ ${#SERVICES_VALIDATE_ROWS[@]} -eq 0 ] && return 0
-    print_table "$(table_header CHECK NAME DETAIL)" "${SERVICES_VALIDATE_ROWS[@]}"
+    print_table_titled "Service checks" "$(table_header CHECK NAME DETAIL)" "${SERVICES_VALIDATE_ROWS[@]}"
 }
 
 services_validate_release_id() {
@@ -390,13 +390,12 @@ services_validate_release() {
     local profile="local"
     [ "$TEST_IN_DOCKER" -eq 1 ] && profile="docker"
 
-    print_table \
+    print_table_titled "Services" \
         "KEY | VALUE" \
         "release | $release" \
         "manifest | $manifest" \
         "profile | $profile" \
         "services_dir | $(services_validate_dir)"
-    echo ""
 
     if ! services_validate_templates_manifest "$manifest"; then
         total=$((total + 1))

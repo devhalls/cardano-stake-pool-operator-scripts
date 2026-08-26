@@ -13,6 +13,10 @@ TEST_FAILURE_LOG=""
 TEST_VERBOSE_LOG=""
 TEST_RUN_LINES=""
 TEST_RESULT_ROWS=()
+TEST_FAILURE_NAMES=()
+TEST_FAILURE_OUTPUTS=()
+TEST_VERBOSE_NAMES=()
+TEST_VERBOSE_OUTPUTS=()
 
 TEST_SCRIPTS_DIR="${TEST_SCRIPTS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 TEST_REPO_ROOT="${TEST_REPO_ROOT:-$REPO_ROOT}"
@@ -264,47 +268,115 @@ run_test() {
     if [ "$code" -eq 0 ]; then
         test_record_result pass "$name" ""
         if [ "$TEST_VERBOSE" -eq 1 ] && [ -n "$output" ]; then
+            TEST_VERBOSE_NAMES+=("$name")
+            TEST_VERBOSE_OUTPUTS+=("$output")
             TEST_VERBOSE_LOG+="=== $name ==="$'\n'"$output"$'\n\n'
         fi
         return 0
     fi
 
     test_record_result fail "$name" "$(test_detail_from_output "$output")"
+    TEST_FAILURE_NAMES+=("$name")
+    TEST_FAILURE_OUTPUTS+=("$output")
     TEST_FAILURE_LOG+="=== $name ==="$'\n'"$output"$'\n\n'
     return 1
 }
 
+# True when captured output is already a print_table box.
+test_output_is_table() {
+    printf '%s\n' "$1" | grep -q '^+[-+]\+$'
+}
+
+# Turn linear validator output into CHECK | DETAIL rows.
+test_output_to_rows() {
+    local output="$1"
+    local line clean key val
+    local -a rows=()
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        clean="$(table_trim "$(table_strip_ansi "$line")")"
+        [ -z "$clean" ] && continue
+        case "$clean" in
+            ---*'---')
+                rows+=("$(table_status_row skip "section" "$(echo "$clean" | sed 's/-//g;s/^[[:space:]]*//;s/[[:space:]]*$//')")")
+                ;;
+            extra\ * | missing\ * | empty\ * | invalid\ * | unset\ * | *mismatch* | *failed* | *'out of date'* | *'not found'*)
+                rows+=("$(table_status_row "" "error" "$clean")")
+                ;;
+            *=*)
+                key="${clean%%=*}"
+                val="${clean#*=}"
+                case "$key" in
+                    *[[:space:]]*) rows+=("$(table_status_row ok "note" "$clean")") ;;
+                    *) rows+=("$(table_status_row ok "$key" "$val")") ;;
+                esac
+                ;;
+            *)
+                rows+=("$(table_status_row ok "note" "$clean")")
+                ;;
+        esac
+    done <<< "$output"
+
+    if [ ${#rows[@]} -eq 0 ]; then
+        rows+=("$(table_status_row "" "error" "no details")")
+    fi
+    printf '%s\n' "${rows[@]}"
+}
+
+test_print_captured_table() {
+    local title="$1"
+    local color="$2"
+    local output="$3"
+    local -a rows
+
+    print_table_title "$title" "$color"
+
+    if [ -z "$output" ]; then
+        print_table "$(table_header CHECK DETAIL)" "$(table_status_row "" "error" "no output")"
+        return
+    fi
+
+    if test_output_is_table "$output"; then
+        printf '%s\n' "$output"
+        return
+    fi
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        [ -z "$line" ] && continue
+        rows+=("$line")
+    done < <(test_output_to_rows "$output")
+
+    print_table "$(table_header CHECK DETAIL)" "${rows[@]}"
+}
+
 test_print_results_table() {
     [ ${#TEST_RESULT_ROWS[@]} -eq 0 ] && return 0
-    print_table "$(table_header TEST STATUS DETAIL)" "${TEST_RESULT_ROWS[@]}"
+    print_table_titled "Results" "$(table_header TEST STATUS DETAIL)" "${TEST_RESULT_ROWS[@]}"
 }
 
 test_print_summary() {
     local suite="${1:-all}"
     local result_cell
+    local i
 
-    echo ""
     test_print_results_table
 
-    if [ "$TEST_VERBOSE" -eq 1 ] && [ -n "$TEST_VERBOSE_LOG" ]; then
-        echo ""
-        print 'TEST' 'Verbose output' $blue
-        printf '%s' "$TEST_VERBOSE_LOG"
+    if [ "$TEST_VERBOSE" -eq 1 ]; then
+        for i in "${!TEST_VERBOSE_NAMES[@]}"; do
+            test_print_captured_table "Verbose: ${TEST_VERBOSE_NAMES[i]}" "$blue" "${TEST_VERBOSE_OUTPUTS[i]}"
+        done
     fi
 
-    if [ "$TEST_FAILED" -gt 0 ] && [ -n "$TEST_FAILURE_LOG" ]; then
-        echo ""
-        print 'TEST' 'Failure details' $red
-        printf '%s' "$TEST_FAILURE_LOG"
-    fi
+    for i in "${!TEST_FAILURE_NAMES[@]}"; do
+        test_print_captured_table "Failure: ${TEST_FAILURE_NAMES[i]}" "$red" "${TEST_FAILURE_OUTPUTS[i]}"
+    done
 
-    echo ""
     if [ "$TEST_FAILED" -gt 0 ]; then
         result_cell="$(table_status_row "" "$suite" "$TEST_PASSED" "$TEST_FAILED" "$TEST_SKIPPED" "failed")"
     else
         result_cell="$(table_status_row ok "$suite" "$TEST_PASSED" "$TEST_FAILED" "$TEST_SKIPPED" "passed")"
     fi
-    print_table \
+    print_table_titled "Summary" \
         "$(table_header SUITE PASSED FAILED SKIPPED RESULT)" \
         "$result_cell"
 
@@ -319,6 +391,10 @@ test_reset_counters() {
     TEST_VERBOSE_LOG=""
     TEST_RUN_LINES=""
     TEST_RESULT_ROWS=()
+    TEST_FAILURE_NAMES=()
+    TEST_FAILURE_OUTPUTS=()
+    TEST_VERBOSE_NAMES=()
+    TEST_VERBOSE_OUTPUTS=()
 }
 
 test_environment_label() {

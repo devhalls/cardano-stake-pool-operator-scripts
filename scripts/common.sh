@@ -411,6 +411,23 @@ table_status_row() {
     esac
 }
 
+# Blank line, [TEST] title, blank line. Pass a colour as the second arg.
+print_table_title() {
+    local title="$1"
+    local color="${2:-$orange}"
+    echo ""
+    print 'TEST' "$title" "$color"
+    echo ""
+}
+
+# Title, then print_table. Remaining args are table rows.
+print_table_titled() {
+    local title="$1"
+    shift
+    print_table_title "$title"
+    print_table "$@"
+}
+
 # Box-drawn table. Rows are `|`-separated (print_state / table_status_row).
 # Long cells wrap so the table fits the terminal; last columns shrink first.
 print_table() {

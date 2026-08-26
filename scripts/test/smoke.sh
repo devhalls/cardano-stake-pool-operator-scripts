@@ -22,7 +22,7 @@ run_suite_smoke() {
 }
 
 list_suite_smoke() {
-    print_table \
+    print_table_titled "Smoke tests" \
         "SUITE | TEST" \
         "smoke | smoke_env_files" \
         "smoke | smoke_env_runtime" \

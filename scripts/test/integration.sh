@@ -39,7 +39,7 @@ run_suite_integration() {
 }
 
 list_suite_integration() {
-    print_table \
+    print_table_titled "Integration tests" \
         "SUITE | GROUP | TEST" \
         "integration | chain | integration_query_tip_slot" \
         "integration | chain | integration_query_tip_epoch" \

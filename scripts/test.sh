@@ -109,7 +109,6 @@ case "$TEST_SUITE" in
         ;;
     list)
         list_suite_smoke
-        echo ""
         list_suite_integration
         exit 0
         ;;
