@@ -418,7 +418,10 @@ install_grafana() {
     _require_relay_node || return 1
     print 'INSTALL' 'Grafana dashboard'
     # Validate PROMETHEUS_SCRAPER_TARGETS before apt; YAML is rendered later by _render_prometheus_yml
-    _prometheus_scraper_targets_yaml >/dev/null || return 1
+    if ! targets="$(_prometheus_scraper_targets_yaml)"; then
+        echo -e "$targets"
+        return 1
+    fi
 
     wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add - || _install_fail 'Could not add Grafana GPG key' || return 1
     echo "deb https://packages.grafana.com/oss/deb stable main" >grafana.list
