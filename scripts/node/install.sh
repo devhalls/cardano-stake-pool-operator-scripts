@@ -296,6 +296,16 @@ _render_prometheus_yml() {
     return 0
 }
 
+_render_grafana_datasources() {
+    local src="$1"
+    local dest="$2"
+    sed \
+        -e "s|__PROMETHEUS_SCRAPER_HOST__|${PROMETHEUS_SCRAPER_HOST}|g" \
+        -e "s|__PROMETHEUS_SCRAPER_PORT__|${PROMETHEUS_SCRAPER_PORT}|g" \
+        "$src" >"$dest" || _install_fail 'Could not render grafana datasources' || return 1
+    return 0
+}
+
 _sync_node_configs() {
     _require_warm_node || return 1
     if [ ! -d "$CONFIG_SOURCE" ]; then
@@ -440,6 +450,12 @@ install_grafana() {
     _render_prometheus_yml "$serviceDir/prometheus.yml" "$serviceDir/prometheus.yml.temp" || return 1
     sudo cp -p "$serviceDir/prometheus.yml.temp" /etc/prometheus/prometheus.yml || _install_fail 'Could not copy prometheus.yml' || return 1
     rm -f "$serviceDir/prometheus.yml.temp" || _install_fail 'Could not remove temporary prometheus.yml' || return 1
+
+    _render_grafana_datasources "$serviceDir/grafana-datasources.yml" "$serviceDir/grafana-datasources.yml.temp" || return 1
+    sudo mkdir -p /etc/grafana/provisioning/datasources || _install_fail 'Could not create grafana datasources directory' || return 1
+    sudo cp -p "$serviceDir/grafana-datasources.yml.temp" /etc/grafana/provisioning/datasources/datasources.yml || \
+        _install_fail 'Could not copy grafana datasources' || return 1
+    rm -f "$serviceDir/grafana-datasources.yml.temp" || _install_fail 'Could not remove temporary grafana datasources' || return 1
 
     sudo sed -i "/# disable user signup \/ registration/{n;s/.*/allow_sign_up = false/}" "/etc/grafana/grafana.ini" || \
         _install_fail 'Could not configure grafana.ini' || return 1

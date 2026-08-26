@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://__PROMETHEUS_SCRAPER_HOST__:__PROMETHEUS_SCRAPER_PORT__
+    isDefault: true
+    editable: true
+
+  - name: CSV
+    type: marcusolsson-csv-datasource
+    uid: csv
+    access: proxy
+    url: /usr/share/grafana/slots.csv
+    editable: true
+    jsonData:
+      storage: local

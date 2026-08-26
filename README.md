@@ -90,6 +90,7 @@ tree --filesfirst -L 3
         ├── blockfrost-platform.service
         ├── cardano-node.service
         ├── cardano-db-sync.service
+        ├── grafana-datasources.yml
         ├── grafana-mithril-dashboard.json
         ├── grafana-node-dashboard.json
         ├── mithril.service
