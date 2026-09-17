@@ -9,14 +9,14 @@ Bash toolkit for **Cardano Stake Pool Operators**: install and run nodes, option
 | `scripts/*.sh` | Production CLI entry points (`address`, `query`, `pool`, `tx`, `govern`, `node`, `dbsync`, `network`, `midnight`) |
 | `scripts/node/` | Build, download, install, update, mithril, icebreaker helpers |
 | `scripts/test/` | Smoke + integration test harness (`test.sh`); release manifests under `releases/` |
-| `configs/node/<version>/<network>/` | Pinned node config bundles (e.g. `11.0.1` × `mainnet` / `preview` / `preprod` / `sanchonet`) |
+| `configs/node/<version>/<network>/` | Pinned node config bundles (e.g. `11.1.2` × `mainnet` / `preview` / `preprod` / `sanchonet`) |
 | `configs/services/` | Systemd unit templates (`$SERVICES_SOURCE`) |
 | `configs/schema/` | cardano-db-sync SQL migrations (`$SCHEMA_SOURCE`) |
 | `docker/` | Local testnet stack (not for mainnet); `docker/script.sh` wraps `scripts/` in the container |
 | `docker/fixture.sh` | Destructive key/register flows for dev (not `test.sh fixture`) |
 | `env.example` / `env.docker` | Definitive env templates; runtime `env` is gitignored |
 
-**Release pin:** `NODE_VERSION=11.0.1` (and matching manifests). Env, services, configs, and build contracts are validated in smoke tests.
+**Release pin:** `NODE_VERSION=11.1.2` (and matching manifests). Env, services, configs, and build contracts are validated in smoke tests.
 
 ## Architecture
 

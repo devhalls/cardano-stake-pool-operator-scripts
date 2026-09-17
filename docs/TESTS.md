@@ -141,12 +141,12 @@ Lists required files per network under `configs/node/<version>/`. Smoke validate
 
 ### Build (`<version>.build.manifest`)
 
-Pins for cardano-node source builds aligned with [11.0.1 release notes](https://github.com/IntersectMBO/cardano-node/releases/tag/11.0.1) (GHC 9.6, Cabal 3.8/3.12): `GHC_VERSION=9.6.7`, `CABAL_VERSION=3.12.1.0`, plus `IOHKNIX_VERSION` / `SODIUM_VERSION` / `SECP256K1_VERSION` / `BLST_VERSION` from the tag `flake.lock`. `smoke_build_release` verifies `node/build.sh` and `node/download.sh` (needs network to resolve upstream pins).
+Pins for cardano-node source builds aligned with [11.1.2 release notes](https://github.com/IntersectMBO/cardano-node/releases/tag/11.1.2) (GHC 9.6, Cabal 3.8/3.12): `GHC_VERSION=9.6.7`, `CABAL_VERSION=3.12.1.0`, plus `IOHKNIX_VERSION` / `SODIUM_VERSION` / `SECP256K1_VERSION` / `BLST_VERSION` from the tag `flake.lock`. `smoke_build_release` verifies `node/build.sh` and `node/download.sh` (needs network to resolve upstream pins).
 
 **Optional installs:** node-only setups without db-sync, mithril, ngrok, or icebreaker report `optional component not installed` and do not fail. Schema pins are skipped when db-sync is not installed.
 
 ```shell
-./docker/script.sh test.sh smoke --release 11.0.1
+./docker/script.sh test.sh smoke --release 11.1.2
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Release test manifests
 
-Each repo release (`NODE_VERSION`, e.g. `11.0.1`) is described by manifest files in this directory. Smoke tests load these to verify configuration matches the release contract.
+Each repo release (`NODE_VERSION`, e.g. `11.1.2`) is described by manifest files in this directory. Smoke tests load these to verify configuration matches the release contract.
 
 ## Files per release
 
