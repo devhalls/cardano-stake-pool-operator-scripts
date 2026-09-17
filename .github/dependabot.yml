@@ -4,12 +4,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    labels:
-      - dependencies
 
   - package-ecosystem: docker
     directory: /docker
     schedule:
       interval: weekly
-    labels:
-      - dependencies
+    ignore:
+      # Local Docker stack is pinned to Ubuntu 24.04 LTS; do not jump major bases.
+      - dependency-name: ubuntu
+        update-types:
+          - "version-update:semver-major"

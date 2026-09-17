@@ -1,4 +1,4 @@
-# Use Ubuntu 24.04 as the base image
+# Ubuntu 24.04 LTS — keep this major; Dependabot is configured to ignore Ubuntu major bumps.
 FROM ubuntu:24.04
 
 # Prevent interactive prompts
