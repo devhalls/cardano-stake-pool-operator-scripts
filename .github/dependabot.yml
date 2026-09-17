@@ -10,7 +10,6 @@ updates:
     schedule:
       interval: weekly
     ignore:
-      # Local Docker stack is pinned to Ubuntu 24.04 LTS; do not jump major bases.
+      # Pin Ubuntu manually to the current LTS (24.04). Dependabot has no LTS-only
+      # filter for Docker tags, so ignore all ubuntu bumps (majors and interims like 24.10).
       - dependency-name: ubuntu
-        update-types:
-          - "version-update:semver-major"

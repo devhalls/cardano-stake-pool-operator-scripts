@@ -1,4 +1,5 @@
-# Ubuntu 24.04 LTS — keep this major; Dependabot is configured to ignore Ubuntu major bumps.
+# Ubuntu 24.04 LTS only — bump manually when adopting the next LTS.
+# Dependabot ignores all ubuntu image updates (see .github/dependabot.yml).
 FROM ubuntu:24.04
 
 # Prevent interactive prompts
