@@ -312,7 +312,7 @@ _sync_node_configs() {
         _install_fail "No config files found for $NODE_VERSION/$NODE_NETWORK at $CONFIG_SOURCE" || return 1
     fi
     print 'INSTALL' "Syncing config files for $NODE_NETWORK ($NODE_VERSION)"
-    for C in ${CONFIG_DOWNLOADS[@]}; do
+    for C in "${CONFIG_DOWNLOADS[@]}"; do
         [ "$C" == 'topology.json' ] && continue
         if [ ! -f "$CONFIG_SOURCE/$C" ]; then
             _install_fail "Missing config file: $CONFIG_SOURCE/$C" || return 1
@@ -379,7 +379,7 @@ install_configs() {
 install_guild() {
     _require_warm_node || return 1
     print 'INSTALL' "Downloading guild scripts"
-    for G in ${GUILD_SCRIPT_DOWNLOADS[@]}; do
+    for G in "${GUILD_SCRIPT_DOWNLOADS[@]}"; do
         wget -O "$NETWORK_PATH/scripts/$G" "$GUILD_REMOTE/$G"
         if [ $? -ne 0 ] || [ ! -s "$NETWORK_PATH/scripts/$G" ]; then
             _install_fail "Could not download guild script: $G" || return 1

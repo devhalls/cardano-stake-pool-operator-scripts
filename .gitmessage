@@ -1,0 +1,10 @@
+[TAG] Short imperative summary (<=72 chars, no trailing period)
+
+# Only tag lines are allowed - any number, one tag per line, tags start the line.
+# No free-form body. Tags:
+#   [ADD] new         [UPD] update      [FIX] bug fix     [DEL] remove
+#   [REF] refactor    [DOC] docs        [TST] tests       [CFG] build/ci/config
+#   [DEP] dependency  [SEC] security    [PRF] performance [REV] revert
+#
+# No AI/Cursor co-author trailers.
+# See docs/GIT.md

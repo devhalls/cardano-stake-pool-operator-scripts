@@ -133,11 +133,11 @@ mithril_sync() {
     print 'MITHRIL' "Syncing db via mithril"
     export AGGREGATOR_ENDPOINT=$MITHRIL_AGGREGATOR_ENDPOINT
     if [[ $NODE_NETWORK == 'preprod' ]]; then
-        export GENESIS_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-preprod/genesis.vkey)
+        export GENESIS_VERIFICATION_KEY=$(curl -s "https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/release-preprod/genesis.vkey")
     elif [[ $NODE_NETWORK == 'preview' ]]; then
-        export GENESIS_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/pre-release-preview/genesis.vkey)
+        export GENESIS_VERIFICATION_KEY=$(curl -s "https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/pre-release-preview/genesis.vkey")
     elif [[ $NODE_NETWORK == 'mainnet' ]]; then
-        export GENESIS_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
+        export GENESIS_VERIFICATION_KEY=$(curl -s "https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/release-mainnet/genesis.vkey")
     else
         _mithril_fail "$NODE_NETWORK is not supported by mithril sync" || return 1
     fi
@@ -151,7 +151,7 @@ mithril_sync() {
 mithril_check_compatability() {
     _require_producer_node || return 1
     print 'MITHRIL' 'Min node version:'
-    wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/networks.json |
+    wget -q -O - "https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/networks.json" |
         jq -r ".\"$NODE_NETWORK\".\"cardano-minimum-version\".\"mithril-signer\""
     return 0
 }

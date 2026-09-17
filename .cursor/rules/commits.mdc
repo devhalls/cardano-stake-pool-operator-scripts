@@ -1,0 +1,12 @@
+---
+description: Tag-line commit message format (Arc-aligned)
+alwaysApply: true
+---
+
+# Commits
+
+- Tag-line commits only (`[ADD] ...`, `[FIX] ...`, etc.) - one tag per line, ≤72 chars, no trailing period
+- No free-form commit body
+- No Cursor / AI co-author trailers
+- See `docs/GIT.md` (ops) or `CONTRIBUTING.md` (monitor)
+- Install hooks: `./scripts/install-hooks.sh`

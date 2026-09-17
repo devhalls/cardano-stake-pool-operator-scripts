@@ -50,6 +50,7 @@ env (+ env.docker in Docker)
 | [docs/registration/05-blockfrost-icebreaker.md](docs/registration/05-blockfrost-icebreaker.md) | Icebreaker on relay |
 | [docs/registration/06-registering-midnight-validator.md](docs/registration/06-registering-midnight-validator.md) | Midnight validator |
 | [docs/TESTS.md](docs/TESTS.md) | `test.sh` suites and manifests |
+| [docs/GIT.md](docs/GIT.md) | Tag-line commit policy and hooks |
 
 ## Running scripts
 
@@ -90,6 +91,7 @@ Help for any script: `scripts/<script>.sh help` (exit code **1**, output must in
 5. **Version bump:** Copy all release manifests; update pins, schema head, build flake pins; see `scripts/test/releases/README.md`.
 6. **Minimal diffs:** No drive-by refactors; this repo favors explicit shell over heavy abstraction.
 7. **Secrets:** Never commit `env`, keys under `$NETWORK_PATH/keys`, or API tokens.
+8. **Commits:** Tag-line only (`[ADD] …`); no free-form body; no Cursor co-author trailers. Install with `./scripts/install-hooks.sh`. See [docs/GIT.md](docs/GIT.md).
 
 ## What this repo is not
 

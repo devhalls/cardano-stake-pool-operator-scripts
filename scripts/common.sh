@@ -65,9 +65,9 @@ if [[ $NODE_TYPE == 'cold' && $NODE_NETWORK == 'mainnet' ]]; then
 else
     MITHRIL_AGGREGATOR_PARAMS=
         case $NODE_NETWORK in
-            "mainnet") MITHRIL_AGGREGATOR_PARAMS=$(jq -nc --arg address $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/era.addr) --arg verification_key $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/era.vkey) '{"address": $address, "verification_key": $verification_key}') ;;
-            "preprod") MITHRIL_AGGREGATOR_PARAMS=$(jq -nc --arg address $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-preprod/era.addr) --arg verification_key $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-preprod/era.vkey) '{"address": $address, "verification_key": $verification_key}') ;;
-            "preview") MITHRIL_AGGREGATOR_PARAMS=$(jq -nc --arg address $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/pre-release-preview/era.addr) --arg verification_key $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/pre-release-preview/era.vkey) '{"address": $address, "verification_key": $verification_key}') ;;
+            "mainnet") MITHRIL_AGGREGATOR_PARAMS=$(jq -nc --arg address $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/release-mainnet/era.addr) --arg verification_key $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/release-mainnet/era.vkey) '{"address": $address, "verification_key": $verification_key}') ;;
+            "preprod") MITHRIL_AGGREGATOR_PARAMS=$(jq -nc --arg address $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/release-preprod/era.addr) --arg verification_key $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/release-preprod/era.vkey) '{"address": $address, "verification_key": $verification_key}') ;;
+            "preview") MITHRIL_AGGREGATOR_PARAMS=$(jq -nc --arg address $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/pre-release-preview/era.addr) --arg verification_key $(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/${MITHRIL_VERSION}/mithril-infra/configuration/pre-release-preview/era.vkey) '{"address": $address, "verification_key": $verification_key}') ;;
         esac
 fi
 
@@ -103,9 +103,9 @@ print() {
     label=${1:-'LABEL'}
     message=${2:-'Message'}
     color=${3:-$orange}
-    echo -e "$color[$label] $message$nc"
+    echo -e "${color}[${label}] ${message}${nc}"
     if [ -f "$NETWORK_PATH/logs/script.log" ]; then
-        echo -e "$color[$label] $message$nc" >>$NETWORK_PATH/logs/script.log
+        echo -e "${color}[${label}] ${message}${nc}" >>$NETWORK_PATH/logs/script.log
     fi
 }
 
@@ -796,11 +796,48 @@ download_release_file() {
         wget -O "downloads/$filename" "$url"
         if [ $? -eq 0 ]; then
             DOWNLOAD_RELEASE_FILENAME="$filename"
+            if [ -n "${DOWNLOAD_SHA256SUMS:-}" ]; then
+                verify_release_sha256 "$remote" "$DOWNLOAD_SHA256SUMS" "downloads/$filename" || return 1
+            fi
             return 0
         fi
         remove_path "downloads/$filename"
     done
     return 1
+}
+
+# Verify a downloaded release asset against an upstream sha256sums file on the same remote.
+# DOWNLOAD_SHA256SUMS should be the sums filename relative to $remote (e.g. cardano-node-11.1.2-sha256sums.txt).
+verify_release_sha256() {
+    local remote="$1"
+    local sums_name="$2"
+    local file="$3"
+    local sums_path="downloads/$sums_name"
+    local base expected_line
+
+    print 'DOWNLOAD' "Verifying checksum via $sums_name" >&2
+    wget -O "$sums_path" "$remote/$sums_name" || {
+        print 'ERROR' "Could not download checksum file: $remote/$sums_name" $red >&2
+        return 1
+    }
+
+    base="$(basename "$file")"
+    expected_line="$(grep -E "[[:space:]](\./)?${base}\$" "$sums_path" | head -1)"
+    if [ -z "$expected_line" ]; then
+        print 'ERROR' "No checksum entry for $base in $sums_name" $red >&2
+        return 1
+    fi
+
+    # Normalize to "HASH  filename" for sha256sum -c in the downloads directory
+    (
+        cd downloads || exit 1
+        echo "$expected_line" | awk -v f="$base" '{print $1 "  " f}' | sha256sum -c -
+    ) || {
+        print 'ERROR' "Checksum verification failed for $base" $red >&2
+        return 1
+    }
+    print 'DOWNLOAD' "Checksum OK for $base" $green >&2
+    return 0
 }
 
 platform_ctl() {

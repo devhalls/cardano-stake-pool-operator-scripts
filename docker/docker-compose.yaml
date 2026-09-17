@@ -27,7 +27,7 @@ services:
             - cardano_ipc:/ipc
         entrypoint: [ "/bin/bash", "-c", "${NODE_HOME}/entrypoint.node.sh" ]
     prometheus:
-        image: prom/prometheus:latest
+        image: prom/prometheus:v3.13.3
         container_name: prometheus
         restart: unless-stopped
         env_file:
@@ -49,7 +49,7 @@ services:
                 --config.file=/tmp/prometheus.yml \
                 --web.listen-address=:$${PROMETHEUS_SCRAPER_PORT}
     grafana:
-        image: grafana/grafana:latest
+        image: grafana/grafana:13.2.2
         container_name: grafana
         restart: unless-stopped
         volumes:

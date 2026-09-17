@@ -12,6 +12,8 @@ credentials for a Stake Pool, DRep or Constitutional Committee member.
 For the community by Upstream Stake Pool [UPSTR](https://upstream.org.uk/cardano-staking/). Delegate to Upstream to help
 support our work.
 
+Security reports: see [SECURITY.md](SECURITY.md).
+
 ---
 
 <details>
@@ -152,17 +154,14 @@ We divide our workflow in two main branches; **deployment**, covering node depen
 
 ### Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any
-contributions you make are greatly appreciated.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/GIT.md](docs/GIT.md). Short version:
 
-If you have a suggestion that would make this plugin better, please fork the repo and create a pull request. You can
-also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
+1. Fork the project and branch from `main` (`feature/<slug>` or `fix/<slug>`).
+2. Install commit hooks once: `./scripts/install-hooks.sh`
+3. Use **tag-line commits only**, e.g. `[FIX] Correct KES rotation help text`
+4. Open a focused PR; title uses the same tag-line format.
 
-1. Fork the Project
-2. Create your Feature Branch (git checkout -b feature/AmazingFeature)
-3. Commit your Changes (git commit -m 'Add some AmazingFeature')
-4. Push to the Branch (git push origin feature/AmazingFeature)
-5. Open a Pull Request [#BuildingTogether](https://x.com/search?q=buildingtogether)
+Security reports: see [SECURITY.md](SECURITY.md).
 
 ### License
 

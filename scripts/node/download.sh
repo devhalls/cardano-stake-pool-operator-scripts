@@ -59,7 +59,8 @@ download_node() {
     local filenames=($(cardano_node_release_filenames)) || _download_fail "Unsupported platform: $(platform)" || return 1
     local filename
 
-    if download_release_file "$NODE_REMOTE" "${filenames[@]}"; then
+    if DOWNLOAD_SHA256SUMS="cardano-node-${NODE_VERSION}-sha256sums.txt" \
+        download_release_file "$NODE_REMOTE" "${filenames[@]}"; then
         filename=$DOWNLOAD_RELEASE_FILENAME
         _extract_cardano_node_release "$filename" || return 1
         remove_path downloads

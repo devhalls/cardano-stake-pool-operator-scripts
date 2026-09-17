@@ -23,13 +23,16 @@ RUN apt-get update && apt install -y \
     jq              `# json reading` \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Prometheus exporter
+# Install Prometheus exporter (checksum verified)
 ARG VERSION=1.0.1
 ARG DIRNAME="node_exporter-$VERSION.linux-amd64"
+ARG NODE_EXPORTER_SHA256=3369b76cd2b0ba678b6d618deab320e565c3d93ccb5c2a0d5db51a53857768ae
 WORKDIR /opt
-RUN wget https://github.com/prometheus/node_exporter/releases/download/v$VERSION/$DIRNAME.tar.gz \
-    && tar xvfz $DIRNAME.tar.gz \
-    && mv $DIRNAME/node_exporter /usr/local/bin
+RUN wget -O "$DIRNAME.tar.gz" "https://github.com/prometheus/node_exporter/releases/download/v$VERSION/$DIRNAME.tar.gz" \
+    && echo "$NODE_EXPORTER_SHA256  $DIRNAME.tar.gz" | sha256sum -c - \
+    && tar xvfz "$DIRNAME.tar.gz" \
+    && mv "$DIRNAME/node_exporter" /usr/local/bin \
+    && rm -rf "$DIRNAME" "$DIRNAME.tar.gz"
 
 # Expose node ports
 EXPOSE 9100 12798

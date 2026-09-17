@@ -145,7 +145,7 @@ address_generate_stake_vote_cert() {
         --stake-verification-key-file $STAKE_VKEY \
         $param \
         --out-file $DELE_VOTE_CERT || _address_fail 'Could not generate vote delegation certificate' || return 1
-    print 'ADDRESS' "Voting delegation certificate created for: $@" $green
+    print 'ADDRESS' "Voting delegation certificate created for: $*" $green
     return 0
 }
 

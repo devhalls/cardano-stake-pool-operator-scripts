@@ -52,10 +52,10 @@ _require_warm_node() {
 
 icebreaker_download() {
     _require_relay_node || return 1
-    print 'ICEBREAKER' "Downloading icebreaker binaries"
-    curl -fsSL \
-         https://github.com/blockfrost/blockfrost-platform/releases/latest/download/curl-bash-install.sh \
-         | bash || _icebreaker_fail 'Could not download icebreaker binaries' || return 1
+    local version="${ICEBREAKER_VERSION:-1.0.0}"
+    local installer_url="https://github.com/blockfrost/blockfrost-platform/releases/download/${version}/curl-bash-install.sh"
+    print 'ICEBREAKER' "Downloading icebreaker binaries (version $version)"
+    curl -fsSL "$installer_url" | bash || _icebreaker_fail 'Could not download icebreaker binaries' || return 1
 
     source "$HOME/.local/opt/blockfrost-platform/add-to-path.sh" || _icebreaker_fail 'Could not source icebreaker path script' || return 1
     blockfrost-platform --init || _icebreaker_fail 'Could not initialize blockfrost platform' || return 1

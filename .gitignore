@@ -12,3 +12,9 @@ docker/postgres
 docker/db-sync
 docker/bin
 node_modules
+*.skey
+*.privatekey
+midnight/.env
+midnight-node.privatekey
+midnight/node.privatekey
+.tmp-sec/
