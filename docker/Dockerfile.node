@@ -1,5 +1,5 @@
 # Ubuntu 24.04 LTS — keep this major; Dependabot is configured to ignore Ubuntu major bumps.
-FROM ubuntu:24.04
+FROM ubuntu:24.10
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
