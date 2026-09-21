@@ -1,6 +1,6 @@
 # Git and releases
 
-Same commit policy as Pendulum Arc / Corten: **tag-line commits only**.
+Commit policy: **tag-line commits only**.
 
 ```
 [ADD] Short imperative summary

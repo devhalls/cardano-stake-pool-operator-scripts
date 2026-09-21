@@ -101,11 +101,16 @@ vars if needed), then run the node update script. The update stops the node, ins
 from the repo bundle for that version, applies `NODE_METRICS_*` and `NODE_TOPOLOGY_*` from `env`, and restarts
 the node. It is not recommended to downgrade a node unless you are confident you know what you are doing.
 
+Pass `--yes` (or set `UPDATE_YES=1`) to skip the interactive confirm — used by fleet automation and non-interactive
+SSH updates.
+
 To sync configs only (without a version bump), use `update configs`:
 
 ```shell
 nano env
 scripts/node.sh update
+# non-interactive:
+scripts/node.sh update --yes
 # or configs only:
 scripts/node.sh update configs
 scripts/node.sh restart

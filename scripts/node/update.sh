@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: node/update.sh (
-#   update |
+#   update [--yes|-y] |
 #   configs |
 #   target |
 #   current |
@@ -14,6 +14,7 @@
 # Info:
 #
 #   - update) Updates a cardano node to $NODE_VERSION. Default value if no options are passed.
+#             Pass --yes|-y or set UPDATE_YES=1 to skip the interactive confirm (fleet/automation).
 #   - configs) Sync node config files from the repo (overwrites bundled files; prompts for topology).
 #   - target) Get the target cardano node version from the env file.
 #   - current) Get the current node version.
@@ -24,6 +25,17 @@
 #   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/../common.sh"
+
+UPDATE_ASSUME_YES="${UPDATE_YES:-0}"
+_UPDATE_ARGS=()
+for _arg in "$@"; do
+    case "$_arg" in
+        --yes | -y) UPDATE_ASSUME_YES=1 ;;
+        *) _UPDATE_ARGS+=("$_arg") ;;
+    esac
+done
+set -- "${_UPDATE_ARGS[@]}"
+unset _arg _UPDATE_ARGS
 
 # Private functions
 
@@ -37,6 +49,10 @@ _update_fail() {
 }
 
 _confirm() {
+    if [[ "$UPDATE_ASSUME_YES" == "1" ]]; then
+        print 'UPDATE' "Skipping confirm (--yes / UPDATE_YES=1)" $orange
+        return 0
+    fi
     read -p "$1 ([y]es or [N]o): "
     case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
         y | yes) return 0 ;;
