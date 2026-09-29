@@ -96,9 +96,9 @@ tx_stake_reg_raw() {
             utxoBalance=$(cardano_cli_utxo_text_field "$utxo" lovelace)
             totalBalance=$((${totalBalance} + ${utxoBalance}))
             txIn="${txIn} --tx-in ${inAddr}#${idx}"
+            txCount=$((${txCount} + 1))
         fi
     done <"$outputPath/balance.out"
-    txCount=$(wc -l < "$outputPath/balance.out" | tr -d ' ')
 
     $CNCLI conway transaction build-raw \
         ${txIn} \
@@ -193,9 +193,9 @@ tx_pool_reg_raw() {
             utxoBalance=$(cardano_cli_utxo_text_field "$utxo" lovelace)
             totalBalance=$((${totalBalance} + ${utxoBalance}))
             txIn="${txIn} --tx-in ${inAddr}#${idx}"
+            txCount=$((${txCount} + 1))
         fi
     done <"$outputPath/balance.out"
-    txCount=$(wc -l < "$outputPath/balance.out" | tr -d ' ')
 
     $CNCLI conway transaction build-raw \
         ${txIn} \

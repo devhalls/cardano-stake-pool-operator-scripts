@@ -640,7 +640,12 @@ cardano_cli_utxo_text_field() {
 }
 
 cardano_cli_utxo_line_spendable() {
-    [[ "$(cardano_cli_utxo_text_field "$1" datumType)" == 'TxOutDatumNone' ]]
+    local datum
+    datum="$(cardano_cli_utxo_text_field "$1" datumType)"
+    case "$datum" in
+        TxOutDatumNone | NoDatum) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 require_cardano_node_arm64_version() {
