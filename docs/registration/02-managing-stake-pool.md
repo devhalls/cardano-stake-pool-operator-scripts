@@ -56,6 +56,11 @@ scripts/query.sh tip epoch
 scripts/query.sh params
 scripts/query.sh params treasuryCut
 
+# Pool registration on-chain (relays, costs, futurePoolParams after an update cert)
+scripts/query.sh pool
+scripts/query.sh pool poolParams
+scripts/query.sh pool futurePoolParams
+
 # Query node prometheus metrics
 scripts/query.sh metrics
 scripts/query.sh metrics cardano_node_metrics_peerSelection_warm

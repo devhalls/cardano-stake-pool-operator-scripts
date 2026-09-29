@@ -31,6 +31,7 @@ run_suite_integration() {
     run_test integration_query_uxto test_integration_query_uxto
     run_test integration_query_rewards test_integration_query_rewards
     run_test integration_query_key_payment_addr test_integration_query_key_payment_addr
+    run_test integration_query_pool test_integration_query_pool
 
     # producer-only queries
     run_test integration_query_kes test_integration_query_kes
@@ -56,6 +57,7 @@ list_suite_integration() {
         "integration | wallet | integration_query_uxto" \
         "integration | wallet | integration_query_rewards" \
         "integration | wallet | integration_query_key_payment_addr" \
+        "integration | pool | integration_query_pool" \
         "integration | producer | integration_query_kes" \
         "integration | producer | integration_query_leader_next" \
         "integration | producer | integration_query_leader_next_cron"
@@ -179,6 +181,17 @@ test_integration_query_key_payment_addr() {
     fi
     _integration_query key payment.addr || return 1
     assert_matches "$TEST_LAST_CAPTURE" 'addr' "payment.addr should contain addr" || return 1
+}
+
+test_integration_query_pool() {
+    if ! assert_file_exists "$POOL_ID" >/dev/null 2>&1; then
+        echo "pool.id missing — register pool or create keys with docker/fixture.sh spo"
+        return 2
+    fi
+    capture_script query.sh pool || return 1
+    assert_matches "$TEST_LAST_CAPTURE" 'poolParams' "pool state should include poolParams" || return 1
+    capture_script query.sh pool poolParams || return 1
+    assert_nonempty "$TEST_LAST_CAPTURE" "poolParams field empty" || return 1
 }
 
 # --- producer-only (optional) ---

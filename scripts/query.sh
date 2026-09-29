@@ -13,6 +13,7 @@
 #   leader [period <STRING<'current'|'next'>>] |
 #   leader_next |
 #   rewards [name <STRING>] |
+#   pool [stakePoolId <STRING>] [field <STRING>] |
 #   help [-h]
 # )
 #
@@ -31,6 +32,7 @@
 #   - leader) Run the pool leader slot query. Pass the period to choose which epoch to query ['next' | 'current' ].
 #   - leader_next) Query next-epoch leadership slots when at least 75% of the current epoch has passed. Skips if already ran (epoch temp file present). Intended for crontab; the function controls timing.
 #   - rewards) Query stake address info. Optionally pass a param name to view only this value.
+#   - pool) Query pool-state (poolParams, futurePoolParams, relays). Defaults to $POOL_ID; optional stake pool id and jq field (e.g. poolParams, futurePoolParams).
 #   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/common.sh"
@@ -336,6 +338,48 @@ query_rewards() {
     return 0
 }
 
+_pool_id_is_explicit() {
+    [[ "$1" == pool1* ]] || [[ "$1" =~ ^[0-9a-fA-F]{56}$ ]]
+}
+
+query_pool() {
+    _require_warm_node || return 1
+    local poolId="" field=""
+    case $# in
+        0)
+            _require_file "$POOL_ID" || return 1
+            poolId=$(<"$POOL_ID")
+            ;;
+        1)
+            if _pool_id_is_explicit "$1"; then
+                poolId="$1"
+            else
+                _require_file "$POOL_ID" || return 1
+                poolId=$(<"$POOL_ID")
+                field="$1"
+            fi
+            ;;
+        2)
+            poolId="$1"
+            field="$2"
+            ;;
+        *)
+            _query_fail 'Usage: query.sh pool [stakePoolId] [field]' || return 1
+            ;;
+    esac
+
+    local data
+    data=$($CNCLI conway query pool-state $NETWORK_ARG --socket-path "$NETWORK_SOCKET_PATH" \
+        --stake-pool-id "$poolId") || _query_fail 'Could not query pool state' || return 1
+
+    if [ -n "$field" ]; then
+        echo "$data" | jq -r ".${field}" || _query_fail "Could not read pool state field: $field" || return 1
+    else
+        echo "$data"
+    fi
+    return 0
+}
+
 case $1 in
     tip) query_tip "${@:2}" ;;
     params) query_params "${@:2}" ;;
@@ -350,6 +394,7 @@ case $1 in
     leader) query_leader "${@:2}" ;;
     leader_next) query_leader_next ;;
     rewards) query_rewards "${@:2}" ;;
+    pool) query_pool "${@:2}" ;;
     help) help "${2:-"--help"}" ;;
     *) help "${1:-"--help"}" ;;
 esac
