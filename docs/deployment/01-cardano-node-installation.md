@@ -50,6 +50,8 @@ ENV variables
 | `PROMETHEUS_SCRAPER_PORT` | `9090` | Monitoring relay only: Prometheus scraper UI and scrape port. |
 | `PROMETHEUS_SCRAPER_TARGETS` | `alias:type@host:port,...` | Monitoring relay: Prometheus scrape targets rendered into `prometheus.yml` on `install grafana`. Example: `block-producer-node:cardano-node@192.168.1.100:12798,relay-1:cardano-node@192.168.1.101:12798`. |
 
+**Config sync:** `install configs` and `update configs` overwrite bundled files under `$NETWORK_PATH` from `configs/node/$NODE_VERSION/$NODE_NETWORK/`. Mainnet and sanchonet include a dedicated `config-bp.json`; preview and preprod copy `config.json` to `config-bp.json` on every sync so producers stay in step with relays. Topology is re-rendered when `NODE_TOPOLOGY_*` is set; metrics bind host/port come from `NODE_METRICS_*`. Other hand-edits in those paths are replaced on the next sync.
+
 ### Node install
 
 > IMPORTANT - Skip the node install and mithril steps for local docker environments.

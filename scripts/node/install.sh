@@ -319,14 +319,15 @@ _sync_node_configs() {
         fi
         cp -p "$CONFIG_SOURCE/$C" "$NETWORK_PATH/$C" || _install_fail "Failed to copy config: $C" || return 1
     done
-    if [[ " ${CONFIG_DOWNLOADS[*]} " != *" config-bp.json "* ]] && [ ! -f "$NETWORK_PATH/config-bp.json" ]; then
-        cp -p "$NETWORK_PATH/config.json" "$NETWORK_PATH/config-bp.json" || _install_fail 'Failed to create config-bp.json' || return 1
+    # Networks without a bundled config-bp.json (preview, preprod) use config.json for producers too.
+    if [[ " ${CONFIG_DOWNLOADS[*]} " != *" config-bp.json "* ]]; then
+        cp -p "$NETWORK_PATH/config.json" "$NETWORK_PATH/config-bp.json" || _install_fail 'Failed to sync config-bp.json from config.json' || return 1
     fi
     _apply_node_metrics_config "$NETWORK_PATH/config.json" || return 1
     _apply_node_metrics_config "$NETWORK_PATH/config-bp.json" || return 1
-    print 'INSTALL' "Review $CONFIG_PATH for local customisations (metrics port, tracing, etc.) before restart." $orange
-    if [ "$NODE_TYPE" == 'producer' ]; then
-        print 'INSTALL' "Producer also uses $NETWORK_PATH/config-bp.json — check both config files." $orange
+    print 'INSTALL' "Bundled configs overwrite repo copies on each sync; use env (e.g. NODE_METRICS_*) for local pins." $orange
+    if [ "$NODE_TYPE" == 'producer' ] && [[ " ${CONFIG_DOWNLOADS[*]} " == *" config-bp.json "* ]]; then
+        print 'INSTALL' "Producer uses bundled $NETWORK_PATH/config-bp.json (may differ from config.json)." $orange
     fi
     _sync_topology || return 1
     print 'INSTALL' "Synced configs for $NODE_NETWORK" $green
