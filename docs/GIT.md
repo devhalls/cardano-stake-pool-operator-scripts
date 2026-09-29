@@ -47,6 +47,6 @@ want external notes.
 Annotated tags are optional for milestone markers:
 
 ```bash
-git tag -a v11.1.2-scripts -m "[CFG] Align scripts with node 11.1.2"
+git tag -a v11.1.3-scripts -m "[CFG] Align scripts with node 11.1.3"
 git push origin main --tags
 ```
