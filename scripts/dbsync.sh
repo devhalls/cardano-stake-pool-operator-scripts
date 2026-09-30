@@ -24,6 +24,8 @@
 #   drop |
 #   view |
 #   get_block |
+#   import-status |
+#   watch-import |
 #   help [-h]
 # )
 #
@@ -53,6 +55,8 @@
 #   - drop) Drop the db-sync postgres database.
 #   - view) List db-sync postgres views.
 #   - get_block) Get the latest block number from the db-sync database.
+#   - import-status) Show pg_restore activity and database size during snapshot import.
+#   - watch-import) Poll import-status every 30s until Ctrl+C (import runs elsewhere).
 #   - help) View this files help. Default value if no option is passed.
 
 source "$(dirname "$0")/../env"
@@ -85,6 +89,9 @@ _confirm() {
 
 _dbsync_pgpass() {
     export PGPASSFILE=$DB_SYNC_PATH/pgpass
+    if [ -f "$PGPASSFILE" ]; then
+        chmod 600 "$PGPASSFILE" 2>/dev/null || true
+    fi
 }
 
 _dbsync_restore_jobs() {
@@ -102,6 +109,7 @@ _dbsync_restore_directory() {
     local jobs
     jobs=$(_dbsync_restore_jobs)
     _dbsync_pgpass
+    print 'INSTALL' "pg_restore from $dump_dir using $jobs parallel job(s) (verbose log below) ..."
     pg_restore \
         --schema=public \
         --format=directory \
@@ -109,6 +117,7 @@ _dbsync_restore_directory() {
         --jobs="$jobs" \
         --exit-on-error \
         --no-owner \
+        --verbose \
         "$dump_dir" || _dbsync_fail "Unable to restore database from $dump_dir" || return 1
     return 0
 }
@@ -150,12 +159,21 @@ _dbsync_migration_manifest_check() {
     return 0
 }
 
+_dbsync_ensure_postgres_role() {
+    local role=$1
+    if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${role}'" 2>/dev/null | grep -q 1; then
+        print 'INSTALL' "Postgres role already exists: ${role}"
+        return 0
+    fi
+    sudo -u postgres createuser -d -r -s "$role" || _dbsync_fail "Could not create postgres role: ${role}" || return 1
+}
+
 # Public functions
 
 dbsync_dependencies() {
     sudo $PACKAGER install postgresql postgresql-contrib -y || _dbsync_fail 'Could not install postgresql' || return 1
-    sudo -u postgres createuser -d -r -s $POSTGRES_USER || _dbsync_fail 'Could not create postgres user' || return 1
-    sudo -u postgres createuser -d -r -s $NODE_USER || _dbsync_fail 'Could not create node postgres user' || return 1
+    _dbsync_ensure_postgres_role "$POSTGRES_USER" || return 1
+    _dbsync_ensure_postgres_role "$NODE_USER" || return 1
     return 0
 }
 
@@ -232,6 +250,8 @@ dbsync_install() {
     sed -i "$SERVICES_SOURCE/pgpass.temp" \
         -e "s|POSTGRES_DB|$POSTGRES_DB|g"
     cp -p "$SERVICES_SOURCE/pgpass.temp" "$DB_SYNC_PATH/pgpass" || _dbsync_fail 'Could not create pgpass file' || return 1
+    rm -f "$SERVICES_SOURCE/pgpass.temp"
+    chmod 600 "$DB_SYNC_PATH/pgpass" || _dbsync_fail 'Could not set pgpass permissions' || return 1
 
     print 'INSTALL' 'Creating db-sync service'
     cp -p "$SERVICES_SOURCE/cardano-db-sync.service" "$SERVICES_SOURCE/$DB_SYNC_NAME.temp"
@@ -249,8 +269,20 @@ dbsync_install() {
 }
 
 dbsync_snapshot_download() {
-    cd $DB_SYNC_PATH && curl -O $POSTGRES_SNAPSHOT && cd - || _dbsync_fail 'Unable to download snapshot' || return 1
-    print 'INSTALL' "Snapshot downloaded to $DB_SYNC_PATH" $green
+    local fileName dest
+    fileName=$(echo "$POSTGRES_SNAPSHOT" | awk -F'/' '{print $NF}')
+    mkdir -p "$DB_SYNC_PATH" || _dbsync_fail 'Could not create db-sync path' || return 1
+    dest="$DB_SYNC_PATH/$fileName"
+    print 'INSTALL' "Downloading snapshot to $dest"
+    print 'INSTALL' 'Large IOG snapshots often drop mid-transfer; re-run snapshot to resume' $orange
+    if command -v wget >/dev/null 2>&1; then
+        wget -c -O "$dest" "$POSTGRES_SNAPSHOT" || _dbsync_fail 'Unable to download snapshot' || return 1
+    else
+        curl -C - -L -f \
+            --retry 50 --retry-all-errors --retry-delay 10 \
+            -o "$dest" "$POSTGRES_SNAPSHOT" || _dbsync_fail 'Unable to download snapshot' || return 1
+    fi
+    print 'INSTALL' "Snapshot downloaded to $dest" $green
     return 0
 }
 
@@ -272,7 +304,10 @@ dbsync_snapshot_process() {
 
 dbsync_snapshot_restore() {
     if test -d "$DB_SYNC_PATH/snapshot/db/"; then
+        print 'INSTALL' "Restoring $POSTGRES_DB from IOG snapshot (often several hours on mainnet)"
+        print 'INSTALL' 'Open another SSH session and run: scripts/dbsync.sh watch-import' $orange
         _dbsync_restore_directory "$DB_SYNC_PATH/snapshot/db/" || return 1
+        print 'INSTALL' "Snapshot import finished for $POSTGRES_DB" $green
         return 0
     fi
     _dbsync_fail 'Unable to import snapshot, snapshot/db directory not found' || return 1
@@ -412,13 +447,44 @@ dbsync_view_db() {
 
 dbsync_get_block() {
     local latest_block
-    latest_block=$(psql "$POSTGRES_DB" -t -A -c "SELECT * FROM block;" 2>/dev/null)
+    latest_block=$(psql "$POSTGRES_DB" -t -A -c "SELECT MAX(block_no) FROM block;" 2>/dev/null)
     if [[ $? -eq 0 && "$latest_block" =~ ^[0-9]+$ ]]; then
         echo $latest_block
         return 0
     fi
     echo ""
     return 0
+}
+
+dbsync_import_status() {
+    _dbsync_pgpass
+    local size workers
+    if pgrep -u "$NODE_USER" -a pg_restore 2>/dev/null | grep -q pg_restore; then
+        print 'INSTALL' 'pg_restore: running' $green
+        workers=$(pgrep -u "$NODE_USER" -c pg_restore 2>/dev/null || echo 0)
+        print 'INSTALL' "pg_restore worker processes: ${workers}"
+    else
+        print 'INSTALL' 'pg_restore: not running (finished, failed, or not started yet)'
+    fi
+    size=$(psql "$POSTGRES_DB" -tAc "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB}'));" 2>/dev/null) || size='(unavailable)'
+    print 'INSTALL' "Database size: ${size}"
+    local block_rows max_block
+    block_rows=$(psql "$POSTGRES_DB" -tAc "SELECT COUNT(*) FROM block;" 2>/dev/null) || block_rows=
+    if [[ "$block_rows" =~ ^[0-9]+$ ]]; then
+        max_block=$(psql "$POSTGRES_DB" -tAc "SELECT MAX(block_no) FROM block;" 2>/dev/null) || max_block=
+        print 'INSTALL' "block table rows: ${block_rows} (max block_no: ${max_block:-n/a})"
+    fi
+    return 0
+}
+
+dbsync_watch_import() {
+    _require_warm_node || return 1
+    print 'INSTALL' 'Polling import progress every 30s (Ctrl+C stops this watch only)'
+    while true; do
+        echo "--- $(date -u +%Y-%m-%dT%H:%M:%SZ) ---"
+        dbsync_import_status
+        sleep 30
+    done
 }
 
 case $1 in
@@ -446,6 +512,8 @@ case $1 in
     drop) dbsync_drop_db ;;
     view) dbsync_view_db ;;
     get_block) dbsync_get_block ;;
+    import-status) dbsync_import_status ;;
+    watch-import) dbsync_watch_import ;;
     help) help "${2:-"--help"}" ;;
     *) help "${1:-"--help"}" ;;
 esac

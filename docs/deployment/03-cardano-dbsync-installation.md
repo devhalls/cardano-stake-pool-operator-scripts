@@ -60,6 +60,15 @@ scripts/dbsync.sh process
 scripts/dbsync.sh import
 ```
 
+`import` runs `pg_restore` with verbose logging (table-by-table). In a **second SSH session**, poll disk growth while import continues:
+
+```shell
+scripts/dbsync.sh watch-import
+# or once: scripts/dbsync.sh import-status
+```
+
+IOG mainnet snapshots are ~75 GiB compressed and may take 20–40+ minutes. If the download fails with `Connection reset by peer`, run `snapshot` again—the script resumes the partial file (`wget -c` or `curl -C -`). Use `tmux` or `screen` so an SSH disconnect does not stop the transfer.
+
 After import, run `download` and `install` if you have not already, then start the service.
 
 ### DBSync update
