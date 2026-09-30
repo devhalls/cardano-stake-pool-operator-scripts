@@ -216,7 +216,8 @@ test_fixture_spo_pool_reg_cert() {
     hash="$(capture_script pool.sh generate_pool_meta_hash)" || return 1
     min_pool="$(capture_script query.sh params minPoolCost)" || return 1
     capture_script pool.sh generate_pool_reg_cert "$min_pool" "$min_pool" 0.01 \
-        "$FIXTURE_SPO_RELAY" "$FIXTURE_SPO_PORT" "$FIXTURE_SPO_META" "$hash" || return 1
+        "$FIXTURE_SPO_META" "$hash" --type DNS \
+        --relay "${FIXTURE_SPO_RELAY}:${FIXTURE_SPO_PORT}" || return 1
 }
 
 test_fixture_spo_stake_del_cert() { capture_script address.sh generate_stake_del_cert || return 1; }

@@ -155,31 +155,36 @@ pool_generate_pool_reg_cert() {
     local metaHash="${5}"
     local relayType=$(get_option --type "$@")
 
-    # Format the relays
+    # Format the relays (get_option --relay returns host:port values only)
     local relayArg=''
-    local relays=$(get_option --relay "$@")
-    echo $relays
+    local relays host port part
+    relays=$(get_option --relay "$@")
     read -ra relayParts <<< "$relays"
-    if [ "${#relayParts[@]}" -eq 2 ]; then
-        IFS=':' read -r ip port <<< "${relays[0]}"
+    if [ "${#relayParts[@]}" -eq 2 ] && [[ "${relayParts[0]}" != *:* ]] && [[ "${relayParts[1]}" != *:* ]]; then
+        host="${relayParts[0]}"
+        port="${relayParts[1]}"
         if [[ $relayType == *DNS* ]]; then
-            relayArg+="--single-host-pool-relay $ip --pool-relay-port $port"
+            relayArg+="--single-host-pool-relay $host --pool-relay-port $port"
         else
-            relayArg+="--pool-relay-ipv4 $ip --pool-relay-port $port"
-        fi;
+            relayArg+="--pool-relay-ipv4 $host --pool-relay-port $port"
+        fi
     else
-        for ((i=0; i<${#relayParts[@]}; i++)); do
-          if [[ "${relayParts[$i]}" == "--relay" ]]; then
-            local hostPort="${relayParts[$((i+1))]}"
-            IFS=':' read -r host port <<< "$hostPort"
-            if [[ $relayType == *DNS* ]]; then
-                relayArg+="--single-host-pool-relay $host --pool-relay-port $port "
-            else
-                relayArg+="--pool-relay-port $port --pool-relay-ipv4 $host "
+        for part in "${relayParts[@]}"; do
+            [ -z "$part" ] && continue
+            IFS=':' read -r host port <<< "$part"
+            if [ -z "$host" ] || [ -z "$port" ]; then
+                _pool_fail "Invalid --relay (expected host:port): $part" || return 1
             fi
-          fi
+            if [[ $relayType == *DNS* ]]; then
+                relayArg+=" --single-host-pool-relay $host --pool-relay-port $port"
+            else
+                relayArg+=" --pool-relay-ipv4 $host --pool-relay-port $port"
+            fi
         done
-    fi;
+    fi
+    if [ -z "${relayArg// /}" ]; then
+        _pool_fail 'No relay arguments generated; use --relay host:port' || return 1
+    fi
 
     $CNCLI conway stake-pool registration-certificate \
         --cold-verification-key-file $NODE_VKEY \
