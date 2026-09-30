@@ -172,7 +172,7 @@ Distributed under the GPL-3.0 License. See LICENSE.txt for more information.
 ## Links
 
 - [Cardano testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet/)
-- [Db-sync snapshots](https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html)
+- [Db-sync snapshots (mainnet)](https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#13.7/) — [13.6 snapshots](https://update-cardano-mainnet.iohk.io/cardano-db-sync/index.html#13.6/) also work with [db-sync 13.7.2.1](https://github.com/IntersectMBO/cardano-db-sync/releases/tag/13.7.2.1)
 - [Upstream SPO website](https://upstream.org.uk)
 - [Upstream Twitter](https://x.com/Upstream_ada)
 - [Upstream Cardano Monitor Scripts](https://github.com/devhalls/spo-operational-scripts)
