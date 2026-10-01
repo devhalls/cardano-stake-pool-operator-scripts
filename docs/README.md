@@ -11,6 +11,7 @@
 6. [Local Docker](deployment/06-docker-installation.md)
 7. [Cardano Ogmios installation](deployment/07-cardano-ogmios-installation.md)
 8. [Cardano DBSync migration](deployment/08-cardano-dbsync-migration.md)
+9. [Protocol params for Cardano Connect API](deployment/09-cardano-connect-protocol-params.md)
 
 **Registration**
 1. [Registering a Stake Pool](registration/01-registering-stake-pool.md)
