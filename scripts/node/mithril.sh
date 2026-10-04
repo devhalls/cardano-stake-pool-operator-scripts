@@ -10,7 +10,7 @@
 #   install_signer_env |
 #   install_signer_service |
 #   install_squid |
-#   configure_squid |
+#   configure_squid <producer-ip> |
 #   start |
 #   stop |
 #   restart |
@@ -38,7 +38,7 @@
 #   - install_signer_env) Installs the mithril signer env.
 #   - install_signer_service) Installs the mithril signer service.
 #   - install_squid) Installs the squid proxy server.
-#   - configure_squid) Configures the squid server.
+#   - configure_squid) Configures squid; arg is block producer lab IP (ACL src).
 #   - start) Starts the mithril signer service.
 #   - stop) Stops the mithril signer service.
 #   - restart) Restarts the mithril signer service.
@@ -292,7 +292,7 @@ mithril_configure_squid() {
 http_port $MITHRIL_RELAY_PORT
 
 # ACL for internal IP of your block producer node
-acl block_producer_internal_ip src $MITHRIL_RELAY_HOST
+acl block_producer_internal_ip src $ipAddress
 
 # ACL for aggregator endpoint
 acl aggregator_domain dstdomain .mithril.network
@@ -336,16 +336,18 @@ cache deny all
 http_access deny all
 " | sudo tee /etc/squid/squid.conf >/dev/null || _mithril_fail 'Could not write squid.conf' || return 1
 
-    sudo adduser --system --no-create-home --group squid || _mithril_fail 'Could not create squid user' || return 1
+    if ! id squid &>/dev/null; then
+        sudo adduser --system --no-create-home --group squid || _mithril_fail 'Could not create squid user' || return 1
+    fi
     sudo chown squid -R /opt/squid/var/ || _mithril_fail 'Could not set squid var ownership' || return 1
     sudo chgrp squid -R /opt/squid/var/ || _mithril_fail 'Could not set squid var group' || return 1
 
     sudo cp -p "$dir/squid.service" "/etc/systemd/system/$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not install squid service file' || return 1
     sudo systemctl daemon-reload || _mithril_fail 'Could not reload systemd' || return 1
-    sudo systemctl start squid || _mithril_fail 'Could not start squid service' || return 1
-    sudo systemctl enable squid || _mithril_fail 'Could not enable squid service' || return 1
+    sudo systemctl enable "$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not enable squid service' || return 1
+    sudo systemctl restart "$MITHRIL_SQUID_SERVICE" || _mithril_fail 'Could not start squid service' || return 1
 
-    print 'MITHRIL' 'Squid service started' $green
+    print 'MITHRIL' "Squid service started: $MITHRIL_SQUID_SERVICE" $green
     return 0
 }
 

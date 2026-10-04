@@ -52,6 +52,7 @@ scripts/node.sh mithril update
 
 ```shell
 scripts/node.sh mithril install_squid
-scripts/node.sh mithril configure_squid
+# Pass the block producer lab IP (squid ACL src), not the relay IP
+scripts/node.sh mithril configure_squid 192.168.10.100
 ```
 
