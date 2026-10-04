@@ -285,6 +285,9 @@ mithril_configure_squid() {
     if [[ ! $ipAddress ]]; then
         _mithril_fail 'Please supply an IP address' || return 1
     fi
+    if [[ ! $MITHRIL_RELAY_PORT ]]; then
+        _mithril_fail 'MITHRIL_RELAY_PORT is not set in env' || return 1
+    fi
 
     sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak || _mithril_fail 'Could not backup squid.conf' || return 1
     printf "
